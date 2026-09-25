@@ -6,11 +6,8 @@
 // from a browser. Lock it down in Cloudinary (videos only, one folder, a size
 // limit), as SETUP.md describes.
 
-export const clipHost = null;
-
-// Once set up, it looks like this:
-// export const clipHost = {
-//   cloudName: "your-cloud-name",
-//   uploadPreset: "cs2-library",
-//   folder: "cs2-library",
-// };
+export const clipHost = {
+    cloudName: "ava6xjbr",
+    uploadPreset: "cs2-library",
+    folder: "cs2-library",
+};

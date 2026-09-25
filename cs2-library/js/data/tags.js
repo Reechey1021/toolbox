@@ -21,6 +21,7 @@ export const THROWS = [
   { id: "middle", name: "Left + right click" },
   { id: "jump", name: "Jumpthrow" },
   { id: "runjump", name: "Run + jumpthrow" },
+  { id: "wm1jump", name: "W + M1 + Jump" },
   { id: "walk", name: "Walk + throw" },
   { id: "crouch", name: "Crouch + throw" },
   { id: "run", name: "Run + throw" },
