@@ -98,6 +98,11 @@ export function beep(kind = "armed") {
   }
 }
 
+// After a question ("which one?"), the next few seconds need no wake word.
+export function armVoice() {
+  if (want) arm();
+}
+
 function arm() {
   armedUntil = Date.now() + ARMED_MS;
   beep("armed");

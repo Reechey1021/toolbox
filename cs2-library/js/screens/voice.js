@@ -67,7 +67,7 @@ export async function voiceScreen() {
         : r.outcome === "opened"
         ? h("p", { class: "vlast__out" }, icon("play", { size: 16 }), `Opened ${r.results[r.index].lineup.name}`)
         : r.outcome === "choose"
-          ? h("div", { class: "vlast__choose" }, h("p", { class: "muted" }, "Not sure which. Pick one, or be more specific:"), r.results.map((x, i) => h("button", { class: "btn btn--quiet vpick", type: "button", onclick: () => chooseResult(i) }, x.lineup.name)))
+          ? h("div", { class: "vlast__choose" }, h("p", { class: "muted" }, `Not sure which. Say the number (\u201ctwo\u201d, or \u201c${voiceSettings().wakeLabel}, 2\u201d), tap one, or be more specific:`), r.results.map((x, i) => h("button", { class: "btn btn--quiet vpick", type: "button", onclick: () => chooseResult(i) }, h("span", { class: "vpicks__n" }, i + 1), h("span", null, x.lineup.name))))
           : h("p", { class: "vlast__out is-none" }, "Nothing matched. Try naming where it lands, like \u201cwindow smoke\u201d.")
     );
   }

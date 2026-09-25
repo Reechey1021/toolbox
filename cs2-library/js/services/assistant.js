@@ -3,9 +3,9 @@
 // ("close", "again", "slower", "next"), or a lineup search that opens the best
 // match, or offers the top few when it isn't sure.
 
-import { onVoice, beep, voiceContext, setVoiceContext } from "./voice.js";
+import { onVoice, beep, voiceContext, setVoiceContext, armVoice } from "./voice.js";
 import { listLineups } from "./library.js";
-import { matchRequest, controlFor, contextFor } from "../data/voice.js";
+import { matchRequest, controlFor, contextFor, numberFrom } from "../data/voice.js";
 import { mapById } from "../data/maps.js";
 import { setShowCallouts } from "./labels.js";
 import { openPlayer, activePlayer } from "../screens/player.js";
@@ -35,6 +35,11 @@ let lastOpened = null; // for "again" once the clip has closed
 
 export async function handleRequest(texts) {
   const text = texts[0];
+  // Answering "which one?": "two", "Lineup, 2".
+  if (last?.outcome === "choose") {
+    const n = texts.map(numberFrom).find((x) => x !== null);
+    if (n && n <= last.results.length) return showResult(n - 1);
+  }
   // "I'm on Mirage CT side": change what you're playing, nothing else.
   const ctx = texts.map(contextFor).find(Boolean);
   if (ctx) {
@@ -91,6 +96,7 @@ export async function handleRequest(texts) {
   if (pick.confident) return showResult(0);
   last.outcome = "choose";
   emit();
+  armVoice(); // "which one?": the answer needs no wake word
 }
 
 async function showResult(i) {

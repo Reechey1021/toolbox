@@ -37,8 +37,8 @@ export function mountVoicePill() {
     if (r?.outcome !== "choose") return (picks.hidden = true);
     replaceChildren(
       picks,
-      h("p", { class: "vpicks__title" }, "Which one?"),
-      r.results.map((x, i) => h("button", { class: "vpicks__btn", type: "button", onclick: () => ((picks.hidden = true), chooseResult(i)) }, x.lineup.name))
+      h("p", { class: "vpicks__title" }, "Which one? Say the number"),
+      r.results.map((x, i) => h("button", { class: "vpicks__btn", type: "button", onclick: () => ((picks.hidden = true), chooseResult(i)) }, h("span", { class: "vpicks__n" }, i + 1), h("span", null, x.lineup.name)))
     );
     picks.hidden = false;
     pickTimer = setTimeout(() => (picks.hidden = true), 15000);

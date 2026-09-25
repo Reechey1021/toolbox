@@ -80,6 +80,14 @@ export function contextFor(text) {
   return out.map || out.side ? out : null;
 }
 
+// "2", "two", "number two", "option 2": picking one of the numbered choices.
+const PICK_WORDS = { one: 1, won: 1, two: 2, to: 2, too: 2, three: 3, four: 4, for: 4, five: 5, six: 6 };
+export function numberFrom(text) {
+  const t = normalise(text).replace(/^(number|option|choice|no) /, "");
+  if (/^\d$/.test(t)) return Number(t);
+  return PICK_WORDS[t] ?? null;
+}
+
 export function controlFor(text) {
   const raw = ` ${String(text || "").toLowerCase().replace(/[^a-z\s-]/g, " ").replace(/\s+/g, " ")} `;
   const co = "(?:call ?outs?|call-outs?|callout labels?)";
@@ -177,7 +185,9 @@ export function matchRequest(lineups, request, { map: contextMap = null, side: c
   const parsed = typeof request === "string" ? parseRequest(request) : request;
   const q = { ...parsed, side: parsed.side || contextSide };
   const map = q.map || contextMap;
-  const pool = map ? lineups.filter((l) => l.map === map) : lineups;
+  // Instant lineups (thrown from a numbered spawn) only when a spawn number is said,
+  // and then only those: "t spawn to window smoke" never offers the instant ones.
+  const pool = (map ? lineups.filter((l) => l.map === map) : lineups).filter((l) => (q.spawn ? Boolean(l.spawn) : !l.spawn));
   const scored = pool
     .map((l) => {
       let s = 0;

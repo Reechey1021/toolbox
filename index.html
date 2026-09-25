@@ -6,23 +6,38 @@
     <title>Reech's Toolbox</title>
     <meta name="theme-color" content="#0e2632" />
     <link rel="icon" href="./darts/icons/icon.svg" type="image/svg+xml" />
-    <!-- Placeholder until the toolbox hub is built. Each tool lives in its own folder. -->
+
     <style>
       :root { color-scheme: dark; }
+
       * { box-sizing: border-box; }
+
       body {
         margin: 0;
         min-height: 100vh;
         min-height: 100dvh;
         display: grid;
-        place-items: center;
+        place-items: start center;
+        padding-top: max(56px, calc(env(safe-area-inset-top) + 32px));
         padding: 24px;
         background: #0e2632;
         color: #fcf0d6;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
       }
-      main { width: 100%; max-width: 420px; }
-      h1 { margin: 0 0 24px; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.035em; }
+
+      main {
+        width: 100%;
+        max-width: 420px;
+      }
+
+      .toolbox-logo {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin: 0 auto 24px;
+        padding: 0 8px;
+      }
+
       a {
         display: flex;
         align-items: center;
@@ -32,40 +47,209 @@
         background: #b40023;
         color: inherit;
         text-decoration: none;
+        transition:
+          background-color 180ms ease,
+          transform 180ms ease;
       }
+
       a:active { background: #710004; }
-      a:focus-visible { outline: 2px solid #6b9ebd; outline-offset: 3px; }
-      .t { display: block; font-size: 1.25rem; font-weight: 750; }
-      .s { display: block; margin-top: 2px; font-size: 0.875rem; opacity: 0.8; }
-      img { width: 44px; height: 44px; border-radius: 12px; }
+
+      a:focus-visible {
+        outline: 2px solid #6b9ebd;
+        outline-offset: 3px;
+      }
+
+      .t {
+        display: block;
+        font-size: 1.25rem;
+        font-weight: 750;
+      }
+
+      .s {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.875rem;
+        opacity: 0.8;
+      }
+
+      main a img {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+      }
+
       main a + a { margin-top: 12px; }
+
       a.cs { background: #05334a; }
+      a.cs:hover { background: #063d58; }
       a.cs:active { background: #0e2632; }
+
+      /* All / Games / Tools */
+      .filter {
+        display: flex;
+        gap: 4px;
+        margin: 0 0 20px;
+        padding: 4px;
+        border-radius: 999px;
+        background: #0a2d40;
+        border: 1px solid rgba(252, 240, 214, 0.12);
+      }
+
+      .filter button {
+        flex: 1;
+        min-height: 42px;
+        border: 0;
+        border-radius: 999px;
+        background: none;
+        color: rgba(252, 240, 214, 0.6);
+        font: inherit;
+        font-size: 0.9375rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+        transition: background 150ms, color 150ms;
+      }
+
+      .filter button:hover {
+        color: #fcf0d6;
+      }
+
+      .filter button[aria-pressed="true"] {
+        background: #fcf0d6;
+        color: #0e2632;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      }
+
+      .filter button:focus-visible {
+        outline: 2px solid #6b9ebd;
+        outline-offset: 2px;
+      }
+
+      main a[hidden] {
+        display: none;
+      }
+
+      main a:not([hidden]) ~ a:not([hidden]) {
+        margin-top: 12px;
+      }
+
+      main a + a {
+        margin-top: 0;
+      }
     </style>
   </head>
+
   <body>
     <main>
-      <h1>Reech's Toolbox</h1>
-      <a href="./darts/">
+      <img
+        class="toolbox-logo"
+        src="./reech-toolbox-logo-full.png"
+        alt="Reech's Toolbox"
+      />
+
+      <div class="filter" role="group" aria-label="Show">
+        <button type="button" data-show="all" aria-pressed="true">All</button>
+        <button type="button" data-show="games" aria-pressed="false">Games</button>
+        <button type="button" data-show="tools" aria-pressed="false">Tools</button>
+      </div>
+
+      <a class="cs" href="./darts/" data-kind="games">
         <img src="./darts/icons/icon-192.png" alt="" />
-        <span><span class="t">Darts</span><span class="s">Scorer, caller and stats</span></span>
+        <span>
+          <span class="t">Darts</span>
+          <span class="s">Scorer, caller and stats</span>
+        </span>
       </a>
-      <a class="cs" href="./cs2-library/">
+
+      <a class="cs" href="./cs2-library/" data-kind="tools">
         <img src="./cs2-library/icons/icon.svg" alt="" />
-        <span><span class="t">CS2 Library</span><span class="s">Lineups, clips and callouts</span></span>
+        <span>
+          <span class="t">CS2 Library</span>
+          <span class="s">Lineups, clips and callouts</span>
+        </span>
       </a>
-      <a class="cs" href="./fuel/">
+
+      <a class="cs" href="./fuel/" data-kind="tools">
         <img src="./fuel/icons/icon.svg" alt="" />
-        <span><span class="t">Fuel cost</span><span class="s">What a trip costs in fuel</span></span>
+        <span>
+          <span class="t">Fuel cost</span>
+          <span class="s">What a trip costs in fuel</span>
+        </span>
       </a>
-      <a class="cs" href="./impostor/">
+
+      <a class="cs" href="./impostor/" data-kind="games">
         <img src="./impostor/icons/icon.svg" alt="" />
-        <span><span class="t">Impostor</span><span class="s">Pass the phone, find the impostor</span></span>
+        <span>
+          <span class="t">Impostor</span>
+          <span class="s">Pass the phone, find the impostor</span>
+        </span>
       </a>
-      <a class="cs" href="./charades/">
+
+      <a class="cs" href="./charades/" data-kind="games">
         <img src="./charades/icons/icon.svg" alt="" />
-        <span><span class="t">Charades</span><span class="s">Phone on your forehead, guess the word</span></span>
+        <span>
+          <span class="t">Charades</span>
+          <span class="s">Phone on your forehead, guess the word</span>
+        </span>
+      </a>
+
+      <a class="cs" href="./f1/" data-kind="tools">
+        <img src="./f1/icons/icon.svg" alt="" />
+        <span>
+          <span class="t">F1</span>
+          <span class="s">Calendar, next race and results</span>
+        </span>
+      </a>
+
+      <a class="cs" href="./convert/" data-kind="tools">
+        <img src="./convert/icons/icon.svg" alt="" />
+        <span>
+          <span class="t">Convert</span>
+          <span class="s">Convert anything</span>
+        </span>
       </a>
     </main>
+
+    <script>
+      // All / Games / Tools, remembered.
+      (function () {
+        var buttons = document.querySelectorAll(".filter button");
+
+        function show(kind) {
+          buttons.forEach(function (b) {
+            b.setAttribute(
+              "aria-pressed",
+              String(b.dataset.show === kind)
+            );
+          });
+
+          document.querySelectorAll("main a[data-kind]").forEach(function (a) {
+            a.hidden =
+              kind !== "all" &&
+              a.dataset.kind !== kind;
+          });
+
+          try {
+            localStorage.setItem("reechHub:show", kind);
+          } catch (e) {}
+        }
+
+        buttons.forEach(function (b) {
+          b.addEventListener("click", function () {
+            show(b.dataset.show);
+          });
+        });
+
+        var saved = "all";
+
+        try {
+          saved =
+            localStorage.getItem("reechHub:show") ||
+            "all";
+        } catch (e) {}
+
+        show(saved);
+      })();
+    </script>
   </body>
 </html>

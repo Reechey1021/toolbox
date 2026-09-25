@@ -3,7 +3,7 @@ import { parseGetpos, worldToRadar, radarToWorld, levelFor, suggestName, filterL
 import { SPAWNS } from "../js/data/spawns.js";
 import { defaultLabels } from "../js/services/labels.js";
 import { mapById, MAPS } from "../js/data/maps.js";
-import { afterWake, normalise, parseRequest, matchRequest, controlFor, similarity, contextFor, WAKE_WORDS, wakeById } from "../js/data/voice.js";
+import { afterWake, normalise, parseRequest, matchRequest, controlFor, similarity, contextFor, WAKE_WORDS, wakeById, numberFrom } from "../js/data/voice.js";
 
 let passed = 0, failed = 0;
 const eq = (a, b, msg) => (JSON.stringify(a) === JSON.stringify(b) ? passed++ : (failed++, console.log("  FAIL", msg, "\n       expected", JSON.stringify(b), "got", JSON.stringify(a))));
@@ -122,6 +122,12 @@ const SP = [
 ];
 eq(matchRequest(SP, "spawn 2 mid smoke", { map: "de_ancient", side: "CT" }).best?.id, "s2", "spawn 2's mid smoke");
 eq(matchRequest(SP, "mid smoke from spawn one", { map: "de_ancient" }).best?.id, "s1", "spawn one's");
+const MIX = [...SP, { id: "reg", map: "de_ancient", type: "smoke", side: "CT", origin: "CT Spawn", dest: "Mid", name: "Mid smoke from CT Spawn" }];
+let mx = matchRequest(MIX, "ct spawn to mid smoke", { map: "de_ancient" });
+eq([mx.best?.id, mx.confident, mx.results.length], ["reg", true, 1], "no spawn number: the instant ones aren't even offered");
+mx = matchRequest(MIX, "spawn 2 mid smoke", { map: "de_ancient" });
+eq([mx.best?.id, mx.results.every((r) => r.lineup.spawn)], ["s2", true], "a spawn number: only the instant ones");
+eq([numberFrom("two"), numberFrom("2"), numberFrom("number three"), numberFrom("option 4"), numberFrom("window smoke")], [2, 2, 3, 4, null], "picking a numbered choice");
 
 // ---------------------------------------------------------------- spawns and areas
 const allSpawns = Object.values(SPAWNS).flatMap((m) => [...m.T, ...m.CT]);

@@ -2743,3 +2743,25 @@ body {
 .cs-spawnsbtn .icon {
   color: var(--marble);
 }
+
+/* Numbered choices: say the number. */
+.vpicks__btn,
+.vpick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vpicks__n {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--varden);
+  color: var(--obsidian);
+  font-family: var(--mono);
+  font-size: var(--fs-13);
+  font-weight: 850;
+}

@@ -1,0 +1,157 @@
+/* css/app.css: Convert */
+
+.cpage {
+  max-width: 560px;
+  padding: calc(var(--safe-top) + var(--s3)) var(--s4) calc(var(--safe-bottom) + var(--s8));
+  margin: 0 auto;
+}
+
+.chead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+
+.chead__title {
+  font-size: var(--fs-28, 1.75rem);
+  font-weight: 850;
+  letter-spacing: var(--tight);
+  line-height: 1.1;
+}
+
+.chead__sub {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.cbox {
+  min-height: 64px;
+  font-size: clamp(1.3rem, 5.5vw, 1.6rem);
+  font-weight: 750;
+}
+
+.cout {
+  margin-top: var(--s4);
+}
+
+.chint,
+.clabel {
+  margin-bottom: var(--s3);
+  color: var(--ink-3);
+  font-weight: 650;
+}
+
+.cex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cchip {
+  padding: 8px 12px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: 700;
+}
+
+.cerr {
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px dashed var(--warn);
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.cres {
+  display: grid;
+  gap: 4px;
+  padding: var(--s5) var(--s4);
+  border-radius: var(--r-slab);
+  background: var(--varden);
+  color: var(--obsidian);
+  text-align: center;
+}
+
+.cres__q {
+  color: var(--slab-ink-2);
+  font-weight: 750;
+}
+
+.cres__a {
+  font-size: clamp(2.2rem, 11vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.cres__name {
+  color: var(--slab-ink-2);
+  font-weight: 700;
+}
+
+.cres__rate {
+  margin-top: var(--s2);
+  color: var(--slab-ink-2);
+  font-size: var(--fs-13);
+}
+
+.call {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.call__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.call__row:hover {
+  background: var(--surface-2);
+}
+
+.call__v {
+  font-size: var(--fs-17);
+  font-weight: 850;
+}
+
+.call__u {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+}
+
+.clib {
+  margin-top: var(--s6);
+  color: var(--ink-2);
+}
+
+.clib summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.clib__cat h2 {
+  margin: var(--s4) 0 4px;
+  color: var(--ink);
+  font-size: var(--fs-15);
+}
+
+.clib__cat p {
+  font-size: var(--fs-13);
+  line-height: 1.6;
+}
