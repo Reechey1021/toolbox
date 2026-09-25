@@ -1,0 +1,196 @@
+/* css/app.css: Fuel cost */
+
+.fpage {
+  max-width: 560px;
+  padding: calc(var(--safe-top) + var(--s3)) var(--s4) calc(var(--safe-bottom) + var(--s8));
+  margin: 0 auto;
+}
+
+.fhead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+
+.fhead__title {
+  flex: 1;
+  font-size: var(--fs-28, 1.75rem);
+  font-weight: 850;
+  letter-spacing: var(--tight);
+}
+
+.fcard {
+  display: grid;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.fcard__title,
+.ffield__label {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ffield {
+  display: grid;
+  gap: 6px;
+  margin-bottom: var(--s3);
+}
+
+.frow {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.frow > .field,
+.frow > select {
+  flex: 1;
+  min-width: 0;
+}
+
+.frow--split {
+  justify-content: space-between;
+}
+
+.fbig {
+  font-size: var(--fs-24, 1.5rem);
+  font-weight: 800;
+}
+
+.fadd {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 var(--s4);
+}
+
+.fcar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  color: var(--ink-2);
+}
+
+.fsmall {
+  min-height: 36px;
+  padding: 0 var(--s3);
+  font-size: var(--fs-13);
+}
+
+.fprice {
+  display: grid;
+  gap: 2px;
+  padding: var(--s3);
+  border-radius: var(--r-key);
+  background: var(--surface-2);
+  text-align: left;
+  color: var(--ink);
+}
+
+.fprice__main {
+  font-weight: 800;
+}
+
+.fprice__sub {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+}
+
+.fresult {
+  display: grid;
+  gap: 6px;
+  padding: var(--s5) var(--s4);
+  border-radius: var(--r-slab);
+  background: var(--varden);
+  color: var(--obsidian);
+  text-align: center;
+}
+
+.fresult__label {
+  color: var(--slab-ink-2);
+  font-size: var(--fs-13);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fresult__cost {
+  font-size: clamp(2.6rem, 12vw, 3.6rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.fresult__each {
+  font-size: var(--fs-17);
+  font-weight: 800;
+}
+
+.fresult__meta,
+.fresult__rates {
+  color: var(--slab-ink-2);
+  font-size: var(--fs-13);
+}
+
+.fresult__empty {
+  color: var(--slab-ink-2);
+  font-weight: 700;
+}
+
+.fresult__cur {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+
+.fresult__cur .ffield__label {
+  color: var(--slab-ink-2);
+}
+
+.fresult .fcur {
+  width: auto;
+  min-height: 40px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background-color: rgba(14, 38, 50, 0.08);
+  border-color: rgba(14, 38, 50, 0.2);
+  color: var(--obsidian);
+  font-size: var(--fs-15);
+}
+
+.fnote {
+  font-size: var(--fs-13);
+}
+
+/* Toggle labels fit their words. */
+.frow .seg,
+.ffield .seg {
+  flex: none;
+}
+
+.frow .seg__opt,
+.ffield .seg__opt {
+  min-width: max-content;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.fprice.is-missing {
+  border: 1px dashed var(--warn);
+}
+
+.fprice.is-missing .fprice__main {
+  color: var(--warn);
+}

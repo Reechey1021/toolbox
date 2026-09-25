@@ -1,0 +1,82 @@
+/* css/tokens.css
+   The Reech Darts identity. Everything else reads from these. */
+
+:root {
+  /* Palette */
+  --obsidian: #0e2632;
+  --cosmos: #05334a;
+  --varden: #fcf0d6;
+  --crimson: #b40023;
+  --dark-red: #710004;
+  --marble: #6b9ebd;
+
+  /* Roles */
+  --bg: var(--obsidian);
+  --surface: #0a2d40; /* between obsidian and cosmos: resting cards */
+  --surface-2: var(--cosmos); /* keys, raised controls */
+  --surface-3: #154760; /* hover and selected on navy */
+  --line: rgba(252, 240, 214, 0.1);
+  --line-strong: rgba(252, 240, 214, 0.2);
+
+  --ink: var(--varden);
+  --ink-2: rgba(252, 240, 214, 0.74);
+  --ink-3: rgba(252, 240, 214, 0.5);
+  --data: var(--marble);
+
+  --action: var(--crimson);
+  --action-press: var(--dark-red);
+  --action-ink: var(--varden);
+
+  /* The slab: the player at the oche */
+  --slab: var(--varden);
+  --slab-ink: var(--obsidian);
+  --slab-ink-2: rgba(14, 38, 50, 0.66);
+  --slab-line: rgba(14, 38, 50, 0.14);
+
+  /* States, tuned to sit with the palette */
+  --ok: #58b48c;
+  --ok-bg: rgba(88, 180, 140, 0.16);
+  --warn: #e8b04e;
+  --warn-bg: rgba(232, 176, 78, 0.16);
+  --bad: #f2646c;
+  --bad-bg: rgba(180, 0, 35, 0.22);
+
+  /* Type */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-15: 0.9375rem;
+  --fs-17: 1.0625rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-32: 2rem;
+  --fs-44: 2.75rem;
+  --tight: -0.035em;
+
+  /* Space (4px grid) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+
+  /* Radii by hierarchy: big panels round the most, small controls the least */
+  --r-slab: 22px;
+  --r-card: 16px;
+  --r-key: 12px;
+  --r-pill: 999px;
+
+  --tap: 48px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --page-max: 720px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: dark;
+}
