@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Engine tests | Reech Darts</title>
+    <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../css/tokens.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <style>
+      .page { padding-top: 32px; }
+      h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+      .summary { margin: 12px 0 24px; font-size: 1.125rem; font-weight: 700; }
+      .summary.is-ok { color: var(--ok); }
+      .summary.is-bad { color: var(--bad); }
+      ol { margin: 0; padding: 0; list-style: none; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+      li { display: grid; grid-template-columns: 1.5rem 1fr; gap: 8px; padding: 10px 16px; }
+      li + li { border-top: 1px solid var(--line); }
+      .mark { font-weight: 800; }
+      .ok .mark { color: var(--ok); }
+      .bad .mark { color: var(--bad); }
+      .err { grid-column: 2; color: var(--bad); font-size: 0.8125rem; }
+      a { color: var(--marble); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <p><a href="../">Back to the app</a></p>
+      <h1 style="margin-top: 16px">Engine tests</h1>
+      <p class="muted" style="margin-top: 8px">Checks the scoring rules, checkouts, replay and stats. Run these after changing anything in js/engine.</p>
+      <p class="summary" id="summary">Running…</p>
+      <ol id="results"></ol>
+    </main>
+    <script type="module">
+      import { run } from "./engine.test.js";
+      const results = await run();
+      const list = document.getElementById("results");
+      let failed = 0;
+      for (const r of results) {
+        const li = document.createElement("li");
+        li.className = r.ok ? "ok" : "bad";
+        li.innerHTML = `<span class="mark">${r.ok ? "✓" : "✗"}</span><span></span>`;
+        li.children[1].textContent = r.name;
+        if (!r.ok) {
+          failed++;
+          const e = document.createElement("span");
+          e.className = "err";
+          e.textContent = r.error;
+          li.append(e);
+        }
+        list.append(li);
+      }
+      const s = document.getElementById("summary");
+      s.textContent = failed ? `${failed} of ${results.length} failed` : `All ${results.length} passed`;
+      s.className = `summary ${failed ? "is-bad" : "is-ok"}`;
+    </script>
+  </body>
+</html>

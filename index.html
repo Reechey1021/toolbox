@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Reech's Toolbox</title>
+    <meta name="theme-color" content="#0e2632" />
+    <link rel="icon" href="./darts/icons/icon.svg" type="image/svg+xml" />
+    <!-- Placeholder until the toolbox hub is built. Each tool lives in its own folder. -->
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #0e2632;
+        color: #fcf0d6;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      }
+      main { width: 100%; max-width: 420px; }
+      h1 { margin: 0 0 24px; font-size: 2.25rem; font-weight: 800; letter-spacing: -0.035em; }
+      a {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px;
+        border-radius: 16px;
+        background: #b40023;
+        color: inherit;
+        text-decoration: none;
+      }
+      a:active { background: #710004; }
+      a:focus-visible { outline: 2px solid #6b9ebd; outline-offset: 3px; }
+      .t { display: block; font-size: 1.25rem; font-weight: 750; }
+      .s { display: block; margin-top: 2px; font-size: 0.875rem; opacity: 0.8; }
+      img { width: 44px; height: 44px; border-radius: 12px; }
+      main a + a { margin-top: 12px; }
+      a.cs { background: #05334a; }
+      a.cs:active { background: #0e2632; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Reech's Toolbox</h1>
+      <a href="./darts/">
+        <img src="./darts/icons/icon-192.png" alt="" />
+        <span><span class="t">Darts</span><span class="s">Scorer, caller and stats</span></span>
+      </a>
+      <a class="cs" href="./cs2-library/">
+        <img src="./cs2-library/icons/icon.svg" alt="" />
+        <span><span class="t">CS2 Library</span><span class="s">Lineups, clips and callouts</span></span>
+      </a>
+    </main>
+  </body>
+</html>

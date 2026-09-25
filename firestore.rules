@@ -1,0 +1,175 @@
+rules_version = '2';
+
+// Security rules for Reech's Toolbox.
+// Paste this into Firebase: Firestore Database, Rules tab, then Publish.
+// (FIREBASE_SETUP.md, step 6.) Paste it again whenever this file changes.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMe(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Friendship documents are named after the two users, lowest id first.
+    function pairOf(a, b) {
+      return a < b ? a + '_' + b : b + '_' + a;
+    }
+
+    function friendsWith(other) {
+      let path = /databases/$(database)/documents/friendships/$(pairOf(request.auth.uid, other));
+      return exists(path) && get(path).data.status == 'accepted';
+    }
+
+    // ------------------------------------------------------------------
+    // Private: your profile, matches and deletions. Only you.
+    // ------------------------------------------------------------------
+    match /users/{uid} {
+      allow read, write: if isMe(uid);
+
+      match /{document=**} {
+        allow read, write: if isMe(uid);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Friend codes: code -> { uid, name, photoURL }.
+    // Anyone signed in can look one up (that's how you add a friend).
+    // Only the owner can claim or change their own.
+    // ------------------------------------------------------------------
+    match /codes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && code.size() == 6;
+      allow update, delete: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+    }
+
+    // ------------------------------------------------------------------
+    // What friends see: name, photo, darts, stat totals.
+    // Readable by you and your accepted friends only.
+    // ------------------------------------------------------------------
+    match /profiles/{uid} {
+      allow read: if isMe(uid) || (signedIn() && friendsWith(uid));
+      allow write: if isMe(uid);
+    }
+
+    // ------------------------------------------------------------------
+    // Friendships: one document per pair, pending until accepted.
+    // ------------------------------------------------------------------
+    match /friendships/{id} {
+      // Opening one: only the two people in it. (One that doesn't exist yet can
+      // be checked for, so you can see whether you've already asked someone.)
+      allow get: if signedIn()
+        && (resource == null || request.auth.uid in resource.data.users);
+
+      // Listing: only friendships you're part of (the app always asks for exactly that).
+      allow list: if signedIn() && request.auth.uid in resource.data.users;
+
+      // Only the sender, only as pending, named after the pair.
+      allow create: if signedIn()
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.users.size() == 2
+        && request.resource.data.users[0] < request.resource.data.users[1]
+        && request.auth.uid in request.resource.data.users
+        && request.resource.data.to in request.resource.data.users
+        && request.resource.data.to != request.auth.uid
+        && id == request.resource.data.users[0] + '_' + request.resource.data.users[1];
+
+      // Only the person asked can accept, and nothing else can change.
+      allow update: if signedIn()
+        && request.auth.uid == resource.data.to
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.users == resource.data.users
+        && request.resource.data.from == resource.data.from
+        && request.resource.data.to == resource.data.to;
+
+      // Either of you can decline, cancel or remove.
+      allow delete: if signedIn() && request.auth.uid in resource.data.users;
+    }
+
+    // ------------------------------------------------------------------
+    // Online lobbies: seats, settings, the match and its visits.
+    // ------------------------------------------------------------------
+    match /lobbies/{code} {
+      function changed() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+      function member() {
+        return request.auth.uid in resource.data.members;
+      }
+      function host() {
+        return request.auth.uid == resource.data.host;
+      }
+
+      // Anyone signed in with the code can see it (that's how joining works).
+      allow get, list: if signedIn();
+
+      // The host creates it, alone in it, open.
+      allow create: if signedIn()
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.status == 'open'
+        && code.size() == 6;
+
+      allow update: if signedIn() && (
+        // Joining: only while open, only yourself, only seats and members change.
+        (!member()
+          && resource.data.status == 'open'
+          && changed().hasOnly(['seats', 'members', 'updatedAt'])
+          && request.resource.data.members == resource.data.members.concat([request.auth.uid]))
+        ||
+        // Players in it.
+        (member()
+          // Only the host changes the settings, starts, rematches or ends it.
+          && (!changed().hasAny(['settings', 'status', 'cfg', 'host', 'seatCount']) || host()
+              // (or the host leaving hands over / closes it)
+              || (changed().hasOnly(['seats', 'members', 'host', 'status', 'updatedAt']) && !(request.auth.uid in request.resource.data.members)))
+          // Visits: anyone when "anyone can score" is on; otherwise the player whose
+          // turn it is, the player undoing their own last visit, or the host starting.
+          && (!changed().hasAny(['events', 'turn', 'lastBy'])
+              || resource.data.settings.anyoneScores == true
+              || request.auth.uid == resource.data.turn
+              || request.auth.uid == resource.data.lastBy
+              || (host() && changed().hasAny(['cfg', 'status']))))
+      );
+
+      allow delete: if signedIn() && host();
+
+      // Chat: only the people in the lobby.
+      match /chat/{msg} {
+        function inLobby() {
+          return request.auth.uid in get(/databases/$(database)/documents/lobbies/$(code)).data.members;
+        }
+        allow read: if signedIn() && inLobby();
+        allow create: if signedIn() && inLobby()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 280;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Invites: "come and play", only to your friends.
+    // ------------------------------------------------------------------
+    match /invites/{id} {
+      allow create: if signedIn()
+        && request.resource.data.from == request.auth.uid
+        && friendsWith(request.resource.data.to);
+      allow read: if signedIn()
+        && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      allow delete: if signedIn()
+        && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+    }
+
+    // Everything else is closed.
+  }
+}

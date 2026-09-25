@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Reech Darts</title>
+    <meta name="description" content="A darts scorer with checkouts, a caller and proper stats." />
+    <meta name="theme-color" content="#0e2632" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Darts" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./css/tokens.css" />
+    <link rel="stylesheet" href="./css/base.css" />
+    <link rel="stylesheet" href="./css/components.css" />
+    <link rel="stylesheet" href="./css/screens.css" />
+    <link rel="stylesheet" href="./css/game.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <noscript>
+      <p class="boot-note">Reech Darts needs JavaScript switched on.</p>
+    </noscript>
+
+    <script>
+      // Opened by double-clicking the file? Browsers block the app's modules there.
+      if (location.protocol === "file:") {
+        document.getElementById("app").innerHTML =
+          '<div class="boot-note"><h1>Run it from a local server</h1>' +
+          "<p>Browsers won't load the app straight from a file. In this folder's parent, run " +
+          "<code>python3 -m http.server 8000</code>, then open " +
+          "<code>http://localhost:8000/darts/</code>. The README has other options.</p></div>";
+      }
+    </script>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>

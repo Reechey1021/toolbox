@@ -1,0 +1,1503 @@
+/* css/game.css
+   The match screen. Phone: scoreboard on top, input tray below.
+   Desktop: scoreboard and chalkboard on the left, input on the right. */
+
+.game {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: var(--safe-top);
+  overflow: hidden;
+}
+
+.game__bar {
+  padding: 0 calc(var(--s2) + var(--safe-right)) 0 calc(var(--s2) + var(--safe-left));
+}
+
+.game__main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 calc(var(--s3) + var(--safe-right)) var(--s3) calc(var(--s3) + var(--safe-left));
+}
+
+.logpanel {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- scoreboard */
+
+.board {
+  --score-size: clamp(3.5rem, 20.5vw, 7.5rem);
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--s2);
+  min-height: 0;
+}
+
+.board[data-players="1"] {
+  --score-size: clamp(5.5rem, 32vw, 11rem);
+  grid-template-columns: 1fr;
+}
+
+.board[data-players="3"],
+.board[data-players="4"] {
+  --score-size: clamp(2.75rem, 12.5vw, 5.5rem);
+}
+
+.board[data-players="3"] .pc:last-child {
+  grid-column: 1 / -1;
+}
+
+/* Three or four players on a phone: compact cards, score and checkout side by side. */
+@media (max-width: 959px) {
+  .board[data-players="3"],
+  .board[data-players="4"] {
+    --score-size: clamp(2.5rem, 11vw, 4rem);
+    gap: 6px;
+  }
+
+  .board[data-players="3"] .pc,
+  .board[data-players="4"] .pc {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "top top"
+      "score route";
+    align-items: end;
+    padding: var(--s2) var(--s3);
+    border-radius: var(--r-card);
+  }
+
+  .board[data-players="3"] .pc__top,
+  .board[data-players="4"] .pc__top {
+    grid-area: top;
+  }
+
+  .board[data-players="3"] .pc__score,
+  .board[data-players="4"] .pc__score {
+    grid-area: score;
+    margin: 0;
+    padding: 0;
+  }
+
+  .board[data-players="3"] .pc__route,
+  .board[data-players="4"] .pc__route {
+    grid-area: route;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    min-height: 0;
+  }
+
+  .board[data-players="3"] .pc__dart,
+  .board[data-players="4"] .pc__dart {
+    min-height: 20px;
+    padding: 0 6px;
+    font-size: var(--fs-12);
+  }
+
+  .board[data-players="3"] .pc__stats,
+  .board[data-players="4"] .pc__stats {
+    display: none;
+  }
+}
+
+.pc {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--s3) var(--s4) var(--s3);
+  border-radius: var(--r-slab);
+  background: var(--surface);
+  color: var(--ink);
+  transition:
+    background 220ms var(--ease),
+    color 220ms var(--ease);
+}
+
+.pc__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-height: 24px;
+}
+
+.pc__name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-weight: 700;
+  font-size: var(--fs-17);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.pc__up {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--crimson);
+}
+
+.pc__legs {
+  display: inline-flex;
+  gap: 4px;
+  flex: none;
+  font-size: var(--fs-13);
+  font-weight: 700;
+}
+
+.pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  opacity: 0.45;
+}
+
+.pip.is-won {
+  background: currentColor;
+  opacity: 1;
+}
+
+.pc.is-long {
+  --score-size-long: 0.78;
+}
+
+.pc__score {
+  margin: auto 0;
+  padding: var(--s1) 0;
+  font-size: calc(var(--score-size) * var(--score-size-long, 1));
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+
+.pc__route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 28px;
+  align-items: center;
+}
+
+.pc__dart {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.pc__note {
+  color: var(--warn);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.pc__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s2);
+  margin: var(--s2) 0 0;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line);
+}
+
+.pc__stat {
+  min-width: 0;
+}
+
+.pc__stat dt {
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+}
+
+.pc__stat dd {
+  margin: 0;
+  font-weight: 750;
+  font-size: var(--fs-15);
+  white-space: nowrap;
+}
+
+/* The player at the oche: the cream slab. */
+.pc.is-active {
+  background: var(--slab);
+  color: var(--slab-ink);
+}
+
+.pc.is-active .pc__name {
+  color: var(--slab-ink);
+}
+
+.pc.is-active .pc__stats {
+  border-top-color: var(--slab-line);
+}
+
+.pc.is-active .pc__stat dt {
+  color: var(--slab-ink-2);
+}
+
+.pc.is-active .pc__dart {
+  background: var(--obsidian);
+  color: var(--varden);
+}
+
+.pc.is-active .pc__dart:last-child {
+  background: var(--crimson);
+}
+
+.pc.is-active .pc__note {
+  color: #9a5a00;
+}
+
+.pc:not(.is-active) .pc__score {
+  color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------------- dock */
+
+.dock {
+  --key-h: clamp(48px, 7.2vh, 66px);
+  min-width: 0;
+  padding: var(--s3) calc(var(--s3) + var(--safe-right)) calc(var(--s3) + var(--safe-bottom)) calc(var(--s3) + var(--safe-left));
+  border-radius: var(--r-slab) var(--r-slab) 0 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+.dock > * {
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap);
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+
+.entry__side {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.entry__display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 62px;
+  padding: 4px var(--s2);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.entry__value {
+  font-size: 2.125rem;
+  font-weight: 850;
+  letter-spacing: var(--tight);
+  line-height: 1;
+}
+
+.entry__value.is-placeholder {
+  color: var(--ink-3);
+  font-size: var(--fs-20);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.entry__hint {
+  margin-top: 4px;
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.entry__hint[data-tone="ok"] {
+  color: var(--ok);
+}
+
+.entry__hint[data-tone="bad"] {
+  color: var(--bad);
+}
+
+/* Quick scores */
+.quick {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: var(--s2);
+}
+
+.quick__btn {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: var(--fs-15);
+  font-variant-numeric: tabular-nums;
+  transition: background 100ms;
+}
+
+.quick__btn:hover {
+  background: rgba(252, 240, 214, 0.05);
+}
+
+.quick__btn:active {
+  background: var(--surface-3);
+}
+
+.quick__btn--zero {
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+/* Keypad */
+.keys {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s2);
+}
+
+.key {
+  display: grid;
+  place-items: center;
+  height: var(--key-h);
+  border-radius: var(--r-key);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 1.625rem;
+  font-weight: 650;
+  transition:
+    background 90ms,
+    transform 90ms;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.key:hover {
+  background: var(--surface-3);
+}
+
+.key:active {
+  background: #1c5572;
+  transform: scale(0.97);
+}
+
+.key--fn {
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+
+.key--enter {
+  background: var(--crimson);
+  color: var(--varden);
+}
+
+.key--enter:hover {
+  background: #c1022a;
+}
+
+.key--enter:active {
+  background: var(--dark-red);
+}
+
+.key--enter:disabled {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  transform: none;
+}
+
+/* Dart pad */
+.entry__display--darts {
+  gap: 0;
+}
+
+.slots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slot {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1.5px dashed var(--line-strong);
+  font-size: var(--fs-17);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.slot.is-filled {
+  border: 0;
+  background: var(--surface-2);
+}
+
+.slot.is-next {
+  border-style: solid;
+  border-color: var(--marble);
+}
+
+.entry__total {
+  min-width: 2.5ch;
+  margin-left: 4px;
+  font-size: var(--fs-24);
+  font-weight: 850;
+  letter-spacing: var(--tight);
+}
+
+.dock.is-complete .slot.is-filled {
+  background: var(--varden);
+  color: var(--obsidian);
+}
+
+.mults {
+  display: grid;
+  grid-template-columns: 1.3fr 1.3fr 1fr 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: var(--s2);
+}
+
+.mult {
+  min-height: 44px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 750;
+  font-size: var(--fs-15);
+  transition:
+    background 100ms,
+    color 100ms;
+}
+
+.mult:active {
+  background: var(--surface-3);
+}
+
+.mult--special {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+
+.mult--fn {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-2);
+}
+
+.mult[aria-pressed="true"] {
+  background: var(--marble);
+  color: var(--obsidian);
+}
+
+.mults .mult:nth-child(2)[aria-pressed="true"] {
+  background: var(--crimson);
+  color: var(--varden);
+}
+
+.pad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.key--pad {
+  height: calc(var(--key-h) * 0.82);
+  font-size: var(--fs-20);
+  font-weight: 700;
+}
+
+.dock[data-mult="2"] .key--pad {
+  box-shadow: inset 0 0 0 1.5px var(--marble);
+}
+
+.dock[data-mult="3"] .key--pad {
+  box-shadow: inset 0 0 0 1.5px var(--crimson);
+}
+
+/* ---------------------------------------------------------------- chalkboard log */
+
+.log__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.log__table th {
+  padding: 8px 10px;
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 10rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.log__table td {
+  padding: 6px 10px;
+  font-size: var(--fs-17);
+  font-weight: 700;
+}
+
+.log__table tbody tr + tr td {
+  border-top: 1px solid rgba(252, 240, 214, 0.05);
+}
+
+.log__darts {
+  width: 2.5rem;
+  color: var(--ink-3);
+  font-size: var(--fs-12) !important;
+  font-weight: 600 !important;
+  text-align: right;
+}
+
+.log__scored {
+  text-align: right;
+  color: var(--ink-2);
+}
+
+.log__scored.is-ton {
+  color: var(--ink);
+}
+
+.log__scored.is-out {
+  color: var(--ok);
+}
+
+.log__left {
+  text-align: left;
+  color: var(--ink);
+}
+
+.log__start .log__left {
+  color: var(--ink-3);
+}
+
+.log__bust {
+  color: var(--bad);
+  font-size: var(--fs-13);
+}
+
+.log__empty {
+  padding: var(--s4);
+  font-size: var(--fs-13);
+  text-align: center;
+}
+
+.sheet--log .sheet__body {
+  margin: var(--s3) calc(var(--s2) * -1) 0;
+}
+
+/* ---------------------------------------------------------------- leg won */
+
+.legwon__tally {
+  display: flex;
+  gap: var(--s6);
+  margin-bottom: var(--s5);
+}
+
+.legwon__side {
+  display: flex;
+  flex-direction: column;
+  color: var(--ink-3);
+}
+
+.legwon__legs {
+  font-size: var(--fs-44);
+  font-weight: 850;
+  letter-spacing: var(--tight);
+  line-height: 1;
+}
+
+.legwon__who {
+  font-weight: 650;
+}
+
+.legwon__side.is-winner {
+  color: var(--ink);
+}
+
+.legwon__side.is-winner .legwon__legs {
+  color: var(--varden);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  padding: var(--s4) 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.facts__item {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.facts__item + .facts__item {
+  padding-left: var(--s3);
+  border-left: 1px solid var(--line);
+}
+
+.facts dt {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+}
+
+.facts dd {
+  margin: 0;
+  font-size: var(--fs-24);
+  font-weight: 800;
+  letter-spacing: var(--tight);
+}
+
+/* ---------------------------------------------------------------- smaller phones */
+
+@media (max-height: 740px) {
+  .dock {
+    --key-h: clamp(44px, 6.6vh, 54px);
+  }
+
+  .quick {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-left: calc(var(--s3) * -1);
+    margin-right: calc(var(--s3) * -1);
+    padding: 0 var(--s3);
+  }
+
+  .quick::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quick__btn {
+    flex: 0 0 auto;
+    min-width: 58px;
+    min-height: 38px;
+    padding: 0 var(--s2);
+  }
+
+  .entry__display {
+    min-height: 54px;
+  }
+
+  .entry__value {
+    font-size: 1.875rem;
+  }
+
+  .pc__stats {
+    margin-top: var(--s1);
+    padding-top: var(--s1);
+  }
+}
+
+@media (max-height: 620px) {
+  .pc__stats {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- wide screens and landscape phones */
+
+@media (min-width: 960px), (orientation: landscape) and (max-height: 560px) {
+  .game {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .game__bar {
+    grid-column: 1 / -1;
+  }
+
+  .game__main {
+    grid-column: 1;
+    grid-row: 2;
+    padding-bottom: calc(var(--s5) + var(--safe-bottom));
+  }
+
+  .dock {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    margin: 0 calc(var(--s5) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom)) 0;
+    padding: var(--s4);
+    border-radius: var(--r-slab);
+    border: 1px solid var(--line);
+  }
+
+  .dock > * {
+    width: 100%;
+  }
+}
+
+@media (min-width: 960px) {
+  .game__bar {
+    padding: 0 var(--s5);
+  }
+
+  .game__logbtn {
+    display: none !important;
+  }
+
+  .game__main {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--s4);
+    padding-left: var(--s5);
+    padding-right: var(--s5);
+  }
+
+  .board {
+    --score-size: clamp(5rem, 9vw, 8.5rem);
+    grid-auto-rows: auto;
+  }
+
+  .board[data-players="1"] {
+    --score-size: clamp(7rem, 14vw, 12rem);
+  }
+
+  .board[data-players="3"],
+  .board[data-players="4"] {
+    --score-size: clamp(3.5rem, 5vw, 5.5rem);
+    grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  }
+
+  .board[data-players="3"] {
+    --cols: 3;
+  }
+
+  .board[data-players="3"] .pc:last-child {
+    grid-column: auto;
+  }
+
+  .board[data-players="4"] {
+    --cols: 4;
+  }
+
+  .pc {
+    min-height: 250px;
+    padding: var(--s4) var(--s5);
+  }
+
+  .logpanel {
+    display: block;
+    min-height: 0;
+    overflow: auto;
+    border-radius: var(--r-card);
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .logpanel .log__table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+
+  .dock {
+    --key-h: 68px;
+    align-self: start;
+    justify-content: flex-start;
+    margin-top: 0;
+  }
+
+  .entry__display {
+    min-height: 72px;
+  }
+
+  .entry__value {
+    font-size: 2.5rem;
+  }
+
+  .quick__btn {
+    min-height: 44px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .game__logbtn {
+    display: inline-grid;
+  }
+
+  .board {
+    --score-size: clamp(3rem, 14vh, 5rem);
+  }
+
+  .pc__stats {
+    display: none;
+  }
+
+  .dock {
+    --key-h: 11vh;
+    margin: 0 calc(var(--s3) + var(--safe-right)) calc(var(--s2) + var(--safe-bottom)) 0;
+    padding: var(--s2);
+  }
+
+  .quick {
+    display: none;
+  }
+
+  .entry {
+    margin-bottom: var(--s1);
+  }
+
+  .entry__display {
+    min-height: 46px;
+  }
+}
+
+/* ---------------------------------------------------------------- quick checkout */
+
+/* The score display is a button, but it only acts like one when you're on a finish. */
+button.entry__display {
+  width: 100%;
+  color: inherit;
+  cursor: default;
+  border: 1px solid transparent;
+  transition:
+    background 140ms,
+    border-color 140ms;
+}
+
+button.entry__display:disabled {
+  opacity: 1;
+}
+
+.entry__display.is-checkout {
+  cursor: pointer;
+  background: var(--ok-bg);
+  border-color: rgba(88, 180, 140, 0.45);
+}
+
+.entry__display.is-checkout .entry__value {
+  color: var(--ok);
+}
+
+.entry__display.is-checkout:active {
+  background: rgba(88, 180, 140, 0.26);
+}
+
+/* ---------------------------------------------------------------- handicaps on cards */
+
+.pc__nametext {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc__hcp {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(232, 176, 78, 0.18);
+  color: var(--warn);
+  font-size: var(--fs-12);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pc.is-active .pc__hcp {
+  background: rgba(154, 90, 0, 0.14);
+  color: #8a5200;
+}
+
+.pc__dart--need {
+  background: rgba(232, 176, 78, 0.18);
+  color: var(--warn);
+}
+
+.pc.is-active .pc__dart--need,
+.pc.is-active .pc__dart--need:last-child {
+  background: var(--obsidian);
+  color: var(--warn);
+}
+
+/* ---------------------------------------------------------------- leg won sheet with the full table */
+
+.legwon .sheet__body {
+  margin-top: var(--s4);
+}
+
+.legwon .legwon__tally {
+  margin-bottom: var(--s4);
+}
+
+.legwon .sheet__actions {
+  position: sticky;
+  bottom: calc(-1 * (var(--s5) + var(--safe-bottom)));
+  margin: var(--s4) calc(-1 * var(--s5)) calc(-1 * (var(--s5) + var(--safe-bottom)));
+  padding: var(--s3) var(--s5) calc(var(--s4) + var(--safe-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 640px) {
+  .legwon .sheet__actions {
+    bottom: calc(-1 * var(--s5));
+    margin-bottom: calc(-1 * var(--s5));
+    padding-bottom: var(--s4);
+    border-radius: 0 0 var(--r-slab) var(--r-slab);
+  }
+}
+
+/* ---------------------------------------------------------------- team cards */
+
+.pc__names {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pc__member {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--ink-3);
+  font-weight: 650;
+  font-size: var(--fs-15);
+  white-space: nowrap;
+}
+
+.pc__member.is-throwing {
+  color: var(--slab-ink);
+  font-weight: 750;
+  font-size: var(--fs-17);
+}
+
+.pc__member.is-next {
+  color: var(--ink);
+}
+
+.pc.is-active .pc__member:not(.is-throwing) {
+  color: var(--slab-ink-2);
+}
+
+.pc__nexttag {
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: rgba(252, 240, 214, 0.1);
+  color: var(--ink-2);
+  font-size: var(--fs-12);
+  font-weight: 650;
+}
+
+.pc__names .pc__hcp {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.pc--team .pc__top {
+  align-items: flex-start;
+}
+
+.log__who {
+  margin-right: 5px;
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- Nemesis throwing */
+
+.dock {
+  position: relative;
+}
+
+.botpanel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s4);
+  width: 100%;
+  border-radius: inherit;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.botpanel[hidden] {
+  display: none;
+}
+
+.botpanel__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--marble);
+  font-weight: 750;
+  font-size: var(--fs-17);
+}
+
+.botpanel .slots {
+  gap: var(--s2);
+}
+
+.botpanel .slot {
+  width: 76px;
+  height: 46px;
+  font-size: var(--fs-20);
+}
+
+.botpanel .entry__total {
+  min-width: 3ch;
+  font-size: var(--fs-32);
+}
+
+.botpanel__skip {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.dock.is-watching > :not(.botpanel) {
+  visibility: hidden;
+}
+
+/* A thought from Nemesis, over the scoreboard. */
+.game__main {
+  position: relative;
+}
+
+.thought {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s4);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(86%, 380px);
+  padding: 10px var(--s4) 12px;
+  border-radius: var(--r-card);
+  background: var(--obsidian);
+  border: 1px solid var(--marble);
+  color: var(--ink);
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition:
+    opacity 200ms var(--ease),
+    transform 240ms var(--ease);
+  pointer-events: none;
+}
+
+.thought.is-in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.thought__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--marble);
+  font-size: var(--fs-12);
+  font-weight: 750;
+}
+
+.thought__text {
+  font-size: var(--fs-17);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+/* ---------------------------------------------------------------- online in the game */
+
+.botpanel.is-waiting {
+  cursor: default;
+}
+
+.botpanel.is-waiting .slots {
+  display: none;
+}
+
+.botpanel.is-waiting .botpanel__skip {
+  max-width: 30ch;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.chatbtn {
+  position: relative;
+}
+
+.chatbtn__badge {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--crimson);
+  color: var(--varden);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Chat lives under the keypad on wide screens; phones use the chat button. */
+.gamechat {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .gamechat {
+    display: block;
+    margin-top: var(--s4);
+  }
+
+  .gamechat .chat__list {
+    max-height: 30vh;
+  }
+
+  .game .chatbtn {
+    display: none;
+  }
+}
+
+.botpanel__undo {
+  flex-direction: row;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: var(--s2);
+  padding: 0 var(--s4);
+  font-size: var(--fs-15);
+}
+
+/* ---------------------------------------------------------------- v4.1 layout fixes */
+
+/* While waiting (Nemesis throwing, or another player's turn), the panel takes
+   the keypad's place in the tray instead of covering it, so the chat stays usable. */
+.dock.is-watching > :not(.botpanel):not(.gamechat) {
+  display: none;
+}
+
+.dock.is-watching .botpanel {
+  position: relative;
+  inset: auto;
+  min-height: clamp(240px, 42vh, 380px);
+}
+
+@media (min-width: 960px) {
+  /* The right-hand column is exactly as tall as the left; the chat fills what's left. */
+  .dock {
+    align-self: stretch;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .dock.is-watching .botpanel {
+    min-height: 360px;
+  }
+
+  .gamechat {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+  }
+
+  .gamechat .chat {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .gamechat .chat__list {
+    flex: 1;
+    max-height: none;
+    min-height: 60px;
+  }
+}
+
+.dock.is-watching > .gamechat {
+  visibility: visible;
+}
+
+/* ---------------------------------------------------------------- arcade */
+
+.arcade-input {
+  display: grid;
+  gap: var(--s2);
+}
+
+.targetpad {
+  display: grid;
+  gap: var(--s3);
+}
+
+.targetpad__keys {
+  display: grid;
+  gap: var(--s2);
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.targetpad__keys--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.targetpad__keys--4 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Four keys: three targets on top, Miss across the bottom. */
+.targetpad__keys--4 .targetkey--miss {
+  grid-column: 1 / -1;
+}
+
+.targetkey {
+  min-height: clamp(76px, 13vh, 116px);
+  border-radius: var(--r-key);
+  font-size: clamp(1.5rem, 7vw, 2.25rem);
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.targetkey--hit {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.targetkey--hit:active {
+  background: var(--varden);
+  color: var(--obsidian);
+}
+
+.targetkey--miss {
+  min-height: clamp(56px, 9vh, 80px);
+  background: transparent;
+  border: 1.5px solid var(--line-strong);
+  color: var(--ink-2);
+  font-size: var(--fs-20);
+}
+
+.arcade__banner {
+  margin: var(--s3) 0 0;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-card);
+  background: rgba(232, 176, 78, 0.12);
+  border: 1px solid rgba(232, 176, 78, 0.4);
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.arcade__done {
+  padding: var(--s6) 0;
+  text-align: center;
+}
+
+.arcade-bull {
+  display: grid;
+  gap: var(--s3);
+}
+
+.arcade-bull__who {
+  font-weight: 700;
+  text-align: center;
+}
+
+.arcade-bull .bull__boardwrap {
+  max-width: 340px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.arcade-wait {
+  position: relative;
+  min-height: clamp(220px, 38vh, 360px);
+}
+
+.pc.is-out {
+  opacity: 0.45;
+}
+
+.arcade .topbar__titles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.arcade .topbar__title {
+  font-weight: 800;
+}
+
+.arcade .topbar__sub {
+  color: var(--ink-3);
+  font-size: var(--fs-13);
+}
+
+/* Two or three keys sit in one row: Miss matches their height. */
+.targetpad__keys--2 .targetkey--miss,
+.targetpad__keys--3 .targetkey--miss {
+  min-height: clamp(76px, 13vh, 116px);
+}
+
+@media (min-width: 960px) {
+  .targetkey,
+  .targetpad__keys--2 .targetkey--miss,
+  .targetpad__keys--3 .targetkey--miss {
+    min-height: 128px;
+  }
+
+  .targetpad__keys--4 .targetkey--miss {
+    min-height: 72px;
+  }
+}
+
+/* ---------------------------------------------------------------- voice input */
+
+/* Voice keeps the keypad's display (it shows what was heard); the mic replaces the keys. */
+.dock[data-mode="voice"] .quick,
+.dock[data-mode="voice"] .keys {
+  display: none;
+}
+
+.voicepanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3) 0 var(--s2);
+  text-align: center;
+}
+
+.voicemic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  width: clamp(150px, 42vw, 190px);
+  height: clamp(150px, 42vw, 190px);
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 2px solid var(--line-strong);
+  color: var(--ink);
+  transition:
+    background 160ms,
+    border-color 160ms,
+    transform 120ms;
+}
+
+.voicemic:active {
+  transform: scale(0.97);
+}
+
+.voicemic:disabled {
+  opacity: 0.5;
+}
+
+.voicemic.isListening {
+  background: var(--crimson);
+  border-color: var(--crimson);
+  color: var(--varden);
+  animation: voice-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(180, 0, 35, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 16px rgba(180, 0, 35, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voicemic.isListening {
+    animation: none;
+  }
+}
+
+.voiceMicLabel {
+  max-width: 14ch;
+  font-size: var(--fs-13);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.voice__status {
+  font-size: var(--fs-17);
+  font-weight: 750;
+}
+
+.voice__heard {
+  min-height: 1.3em;
+  color: var(--ink-2);
+  font-size: var(--fs-15);
+  font-style: normal;
+}
+
+.voice__tip,
+.voice__engine {
+  max-width: 34ch;
+  font-size: var(--fs-13);
+}
+
+.voice__modewrap {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.voice__mode {
+  min-height: 40px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: var(--fs-15);
+}
+
+/* In a match there's no back button: a spacer keeps the title centred. */
+.game__nobtn {
+  visibility: hidden;
+  pointer-events: none;
+}
