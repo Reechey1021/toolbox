@@ -10,7 +10,7 @@
 //     createdAt, updatedAt }
 
 import { RADAR_SIZE } from "./maps.js";
-import { nameOf, TYPES, THROWS, SIDES, PURPOSES } from "./tags.js";
+import { nameOf, TYPES, SIDES, PURPOSES, THROW_GROUPS, LEGACY_THROWS } from "./tags.js";
 import { WAKE_WORDS } from "./voice.js";
 
 // "setpos 1136.00 -1215.96 -103.96;setang 3.60 -139.45 0.00" (CS2's getpos output).
@@ -56,9 +56,23 @@ export function suggestName({ type, origin, dest, spawn = null }) {
   return [dest, t].filter(Boolean).join(" ") + (from ? ` from ${from}` : "");
 }
 
+// How a lineup's thrown, as { type: [], speed: [], tap: [] }: its tags, or its old
+// single "throw" translated (older lineups keep working without being re-saved).
+export function throwTags(l) {
+  const t = l?.throws ?? LEGACY_THROWS[l?.throw] ?? {};
+  return Object.fromEntries(THROW_GROUPS.map((g) => [g.id, (t[g.id] ?? []).filter((id) => g.tags.some((x) => x.id === id))]));
+}
+
+// "Left click · Run · W + Jump" (empty when nothing's tagged).
+export function throwLabel(l) {
+  const t = throwTags(l);
+  const names = (g) => t[g.id].map((id) => g.tags.find((x) => x.id === id).name);
+  return THROW_GROUPS.map((g) => (g.id === "tap" ? names(g).join(" + ") : names(g).join(" / "))).filter(Boolean).join(" \u00b7 ");
+}
+
 // The tags as short labels, for tooltips and the player.
 export function tagLabels(l) {
-  return [nameOf(TYPES, l.type), nameOf(SIDES, l.side) === "Both" ? "T and CT" : nameOf(SIDES, l.side), nameOf(THROWS, l.throw), ...(l.purposes || []).map((p) => nameOf(PURPOSES, p))].filter(Boolean);
+  return [nameOf(TYPES, l.type), nameOf(SIDES, l.side) === "Both" ? "T and CT" : nameOf(SIDES, l.side), throwLabel(l), ...(l.purposes || []).map((p) => nameOf(PURPOSES, p))].filter(Boolean);
 }
 
 // filters: { types: Set, sides: Set of "T" / "CT" (or side: "all" | "T" | "CT"),
@@ -85,7 +99,6 @@ export function missingFor(l) {
   if (!l.map) out.push("a map");
   if (!l.type) out.push("the grenade type");
   if (!l.side) out.push("the side");
-  if (!l.throw) out.push("how it's thrown");
   if (!l.origin) out.push("where it's thrown from (callout)");
   if (!l.dest) out.push("where it lands (callout)");
   if (!onRadar(l.from)) out.push("the throw spot on the map");

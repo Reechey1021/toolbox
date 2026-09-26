@@ -11,8 +11,8 @@
 import { h, replaceChildren } from "../../ui/dom.js";
 import { switchRow } from "../../ui/components.js";
 import { icon } from "../../ui/icons.js";
-import { TYPES, typeById, THROWS, nameOf } from "../../data/tags.js";
-import { filterLineups, authorsOf, groupBySpot, areaRadius } from "../../data/lineups.js";
+import { TYPES, typeById } from "../../data/tags.js";
+import { filterLineups, authorsOf, groupBySpot, areaRadius, throwLabel } from "../../data/lineups.js";
 import { prefs } from "../../services/store.js";
 import { listLineups, onLibraryChange } from "../../services/library.js";
 import { accountState, onAccount, isFavourite } from "../../services/account.js";
@@ -193,7 +193,7 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
           l.spawn ? h("span", { class: "callpill callpill--spawn" }, `Spawn ${l.spawn}`) : h("span", { class: "callpill" }, l.origin),
           h("span", { class: "spotcard__arrow", "aria-hidden": "true" }, "\u203a"),
           h("span", { class: "callpill" }, l.dest),
-          h("span", { class: "spotcard__throw" }, nameOf(THROWS, l.throw))
+          throwLabel(l) ? h("span", { class: "spotcard__throw" }, throwLabel(l)) : null
         )
       ),
       nadeIconEl(l.type, 34)

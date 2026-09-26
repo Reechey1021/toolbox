@@ -1,5 +1,5 @@
 // node cs2-library/tests/run.mjs
-import { parseGetpos, worldToRadar, radarToWorld, levelFor, suggestName, filterLineups, missingFor, authorsOf, permissionsFor, cleanPlayback, groupBySpot, areaRadius } from "../js/data/lineups.js";
+import { parseGetpos, worldToRadar, radarToWorld, levelFor, suggestName, filterLineups, missingFor, authorsOf, permissionsFor, cleanPlayback, groupBySpot, areaRadius, throwTags, throwLabel } from "../js/data/lineups.js";
 import { SPAWNS } from "../js/data/spawns.js";
 import { defaultLabels } from "../js/services/labels.js";
 import { mapById, MAPS } from "../js/data/maps.js";
@@ -40,7 +40,7 @@ eq(filterLineups(L, { authors: new Set(["ghostex"]) }).map((l) => l.id), [2, 3],
 eq(filterLineups(L, { authors: new Set(["ghostex", "Reech"]) }).length, 3, "both authors: all three");
 eq(authorsOf(L), ["ghostex", "Reech"], "authors");
 eq(missingFor({ map: "de_mirage", type: "smoke", side: "T", throw: "jump", origin: "T Spawn", dest: "Window", from: { x: 0.5, y: 0.5 }, to: { x: 0.4, y: 0.4 } }), [], "complete lineup");
-ok(missingFor({}).length === 8, "empty lineup lists everything");
+ok(missingFor({}).length === 7, "empty lineup lists everything (how it's thrown is optional)");
 
 
 // ---------------------------------------------------------------- voice
@@ -141,6 +141,13 @@ near(areaRadius(mapById("de_mirage"), { type: "smoke" }), 144 / 5 / 1024 * 1000,
 ok(areaRadius(mapById("de_mirage"), { type: "he" }) > areaRadius(mapById("de_mirage"), { type: "smoke" }), "HE bigger than smoke");
 ok(areaRadius(mapById("de_mirage"), { type: "molotov", side: "CT" }) < areaRadius(mapById("de_mirage"), { type: "molotov", side: "T" }), "incendiary a touch smaller");
 eq(areaRadius(mapById("de_mirage"), { type: "flash" }), 0, "flashes: no area");
+
+// ---------------------------------------------------------------- throws
+eq(throwTags({ throw: "wm1jump" }), { type: ["left"], speed: [], tap: ["w", "jump"] }, "an old throw translates (nothing wiped)");
+eq(throwLabel({ throw: "runjump" }), "Left click \u00b7 Run \u00b7 Jump", "old run + jumpthrow");
+eq(throwLabel({ throws: { type: ["left"], speed: ["walk"], tap: ["w", "d"] } }), "Left click \u00b7 Walk \u00b7 W + D", "the new tags");
+eq(throwLabel({ throws: { type: [], speed: [], tap: [] } }), "", "none at all is fine");
+eq(throwTags({ throws: { type: ["left"] }, throw: "run" }).speed, [], "new tags win over the old throw");
 
 // ---------------------------------------------------------------- callouts
 eq([controlFor("show callouts"), controlFor("show me the call outs"), controlFor("hide callouts"), controlFor("callouts off"), controlFor("turn on call-outs")], ["callouts-on", "callouts-on", "callouts-off", "callouts-off", "callouts-on"], "show and hide callouts");

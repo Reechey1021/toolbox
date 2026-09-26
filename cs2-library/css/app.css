@@ -2780,3 +2780,41 @@ body {
   font-weight: 850;
   pointer-events: none;
 }
+
+/* Add content: how it's thrown, as tags in three groups. */
+.throwpick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--r-key);
+  background: rgba(252, 240, 214, 0.03);
+  border: 1px solid var(--line);
+}
+
+.throwpick__group {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+
+.throwpick__name {
+  margin-bottom: 4px;
+  color: var(--marble);
+  font-family: var(--mono);
+  font-size: var(--fs-12);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.throwpick .fcheck {
+  min-height: 34px;
+  font-size: var(--fs-15);
+}
+
+@media (max-width: 599px) {
+  .throwpick {
+    grid-template-columns: 1fr;
+  }
+}

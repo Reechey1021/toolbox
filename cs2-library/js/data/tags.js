@@ -15,6 +15,27 @@ export const SIDES = [
   { id: "both", name: "Both" },
 ];
 
+// How it's thrown: tags from three groups (any number from each, or none).
+export const THROW_GROUPS = [
+  { id: "type", name: "Throw type", tags: [{ id: "left", name: "Left click" }, { id: "right", name: "Right click" }, { id: "middle", name: "Left + right click" }] },
+  { id: "speed", name: "Speed", tags: [{ id: "crouch", name: "Crouch" }, { id: "walk", name: "Walk" }, { id: "run", name: "Run" }] },
+  { id: "tap", name: "Tap", tags: [{ id: "w", name: "W" }, { id: "a", name: "A" }, { id: "s", name: "S" }, { id: "d", name: "D" }, { id: "jump", name: "Jump" }] },
+];
+
+// Lineups saved before the groups had one "throw": what each one means now.
+export const LEGACY_THROWS = {
+  left: { type: ["left"] },
+  right: { type: ["right"] },
+  middle: { type: ["middle"] },
+  jump: { type: ["left"], tap: ["jump"] },
+  runjump: { type: ["left"], speed: ["run"], tap: ["jump"] },
+  wm1jump: { type: ["left"], tap: ["w", "jump"] },
+  walk: { type: ["left"], speed: ["walk"] },
+  crouch: { type: ["left"], speed: ["crouch"] },
+  run: { type: ["left"], speed: ["run"] },
+};
+
+// The old single list (kept so nothing that still reads it breaks).
 export const THROWS = [
   { id: "left", name: "Left click" },
   { id: "right", name: "Right click" },

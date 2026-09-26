@@ -8,8 +8,9 @@ import { icon } from "../ui/icons.js";
 import { segmented, openSheet, toast } from "../ui/components.js";
 import { navigate, currentQuery } from "../ui/router.js";
 import { MAPS, mapById } from "../data/maps.js";
-import { TYPES, SIDES, THROWS, PURPOSES } from "../data/tags.js";
-import { parseGetpos, worldToRadar, levelFor, onRadar, suggestName, missingFor, areaRadius } from "../data/lineups.js";
+import { TYPES, SIDES, PURPOSES, THROW_GROUPS } from "../data/tags.js";
+import { parseGetpos, worldToRadar, levelFor, onRadar, suggestName, missingFor, areaRadius, throwTags } from "../data/lineups.js";
+import { getLabels } from "../services/labels.js";
 import { prefs } from "../services/store.js";
 import { getLineup, saveLineup, clipUrl, customCallouts, addCallout, saveTarget, canEdit } from "../services/library.js";
 import { cloudAvailable } from "../services/cloud.js";
@@ -66,7 +67,7 @@ export async function addScreen(params = {}) {
   const q = currentQuery();
   const l = editing
     ? { ...editing, purposes: [...(editing.purposes || [])], arc: [...(editing.arc || [])] }
-    : { map: q.get("map") || prefs.get("lastMap", "de_mirage"), type: "smoke", side: "T", throw: "left", origin: "", dest: "", purposes: [], author: displayNickname() || prefs.get("author", ""), name: "", notes: "", from: null, to: null, arc: [], world: null, level: "upper", clip: null };
+    : { map: q.get("map") || prefs.get("lastMap", "de_mirage"), type: "smoke", side: "T", throws: { type: [], speed: [], tap: [] }, origin: "", dest: "", purposes: [], author: displayNickname() || prefs.get("author", ""), name: "", notes: "", from: null, to: null, arc: [], world: null, level: "upper", clip: null };
   let nameEdited = Boolean(editing?.name);
   let file = null;
 
@@ -115,7 +116,9 @@ export async function addScreen(params = {}) {
   async function calloutSelect(key, label) {
     const map = mapById(l.map);
     const custom = (await customCallouts(l.map)).map((c) => c.name);
-    const names = [...new Set([...map.callouts, ...custom])].sort((a, b) => a.localeCompare(b));
+    // Callouts placed on the map (the callout builder) join the list too.
+    const placed = (await getLabels(l.map)).map((c) => c.text);
+    const names = [...new Map([...map.callouts, ...custom, ...placed].map((n) => [n.toLowerCase(), n])).values()].sort((a, b) => a.localeCompare(b));
     if (l[key] && !names.includes(l[key])) names.push(l[key]);
     return h(
       "select",
@@ -341,7 +344,33 @@ export async function addScreen(params = {}) {
   // ---------------------------------------------------------------- choosing things
   const typeSeg = segmented({ label: "Grenade", value: l.type, options: TYPES.map((t) => ({ value: t.id, label: t.name })), className: "seg--wrap seg--nades", onChange: (v) => ((l.type = v), suggest(), renderMarks()) });
   const sideSeg = segmented({ label: "Side", value: l.side, options: SIDES.map((s) => ({ value: s.id, label: s.name })), onChange: (v) => ((l.side = v), (l.spawn = null), renderSpawnPick(), renderMarks()) });
-  const throwSel = h("select", { class: "field select", "aria-label": "Throw", onchange: (e) => (l.throw = e.target.value) }, THROWS.map((t) => h("option", { value: t.id, selected: l.throw === t.id }, t.name)));
+  // How it's thrown: tags from three groups, as many as apply from each (or none).
+  l.throws = throwTags(l);
+  const throwPick = h(
+    "div",
+    { class: "throwpick" },
+    THROW_GROUPS.map((g) =>
+      h(
+        "div",
+        { class: "throwpick__group", role: "group", "aria-label": g.name },
+        h("span", { class: "throwpick__name" }, g.name),
+        g.tags.map((t) =>
+          h(
+            "label",
+            { class: "fcheck" },
+            h("input", {
+              type: "checkbox",
+              "data-throw": `${g.id}:${t.id}`,
+              checked: l.throws[g.id].includes(t.id),
+              onchange: (e) => (l.throws[g.id] = e.target.checked ? [...l.throws[g.id], t.id] : l.throws[g.id].filter((x) => x !== t.id)),
+            }),
+            h("span", { class: "fcheck__box", "aria-hidden": "true" }),
+            h("span", { class: "fcheck__label" }, t.name)
+          )
+        )
+      )
+    )
+  );
   const mapSel = h(
     "select",
     {
@@ -423,7 +452,7 @@ export async function addScreen(params = {}) {
           field("Map", mapSel),
           field("Grenade", typeSeg),
           field("Side", sideSeg),
-          field("Throw", throwSel),
+          field("Throw", throwPick),
           field("Thrown from", originWrap),
           field("Lands at", destWrap),
           field("Purpose", purposeSel),
