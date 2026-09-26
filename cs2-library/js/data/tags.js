@@ -7,7 +7,11 @@ export const TYPES = [
   { id: "flash", name: "Flash", colour: "#f2cf2e" },
   { id: "molotov", name: "Molotov", colour: "#ff4d4d" },
   { id: "he", name: "HE grenade", colour: "#3fcf72" },
+  { id: "group", name: "Utility group", colour: "#b98cff" }, // several from one spot, one clip
 ];
+// The real grenades (a group's utilities are each one of these).
+export const GRENADES = TYPES.filter((t) => t.id !== "group");
+export const GROUP_MAX = 10;
 
 export const SIDES = [
   { id: "T", name: "T" },

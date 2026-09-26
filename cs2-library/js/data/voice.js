@@ -104,7 +104,12 @@ const NUMBER_WORDS = { one: 1, won: 1, two: 2, to: 2, too: 2, three: 3, four: 4,
 // "mirage window smoke from ct spawn" -> { map, type, side, dest, origin, spawn }
 export function parseRequest(text) {
   let t = ` ${normalise(text)} `;
-  const out = { map: null, type: null, side: null, dest: "", origin: "", spawn: null };
+  const out = { map: null, type: null, side: null, dest: "", origin: "", spawn: null, group: false };
+  // "group": utility groups only when it's said.
+  if (/ groups? /.test(t)) {
+    out.group = true;
+    t = t.replace(/ groups? /g, " ");
+  }
   // "spawn 2" / "spawn two"; sound-alikes ("to", "for") only after "spawn number",
   // so "t spawn to window" stays a route.
   const sp = / spawn (?:number |no |position )?(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten) /.exec(t) || / spawn (?:number|no|position) (won|to|too|for) /.exec(t);
@@ -187,13 +192,30 @@ export function matchRequest(lineups, request, { map: contextMap = null, side: c
   const map = q.map || contextMap;
   // Instant lineups (thrown from a numbered spawn) only when a spawn number is said,
   // and then only those: "t spawn to window smoke" never offers the instant ones.
-  const pool = (map ? lineups.filter((l) => l.map === map) : lineups).filter((l) => (q.spawn ? Boolean(l.spawn) : !l.spawn));
+  // ...and utility groups only when "group" is said (or their name: see matchName).
+  const pool = (map ? lineups.filter((l) => l.map === map) : lineups).filter((l) => (q.spawn ? Boolean(l.spawn) : !l.spawn)).filter((l) => (q.group ? l.type === "group" : l.type !== "group"));
   const scored = pool
     .map((l) => {
       let s = 0;
-      if (q.type) s += l.type === q.type ? 2 : -3;
+      const items = l.type === "group" ? l.items || [] : null;
+      if (q.type) s += (items ? items.some((it) => it.type === q.type) : l.type === q.type) ? 2 : -3;
+      if (items) {
+        // A group: its name, or any of its utilities' landings.
+        if (q.dest) {
+          const d = Math.max(similarity(q.dest, l.name || "") * 4, ...items.map((it) => similarity(q.dest, it.dest || "") * 4));
+          s += d < 1 ? -6 : d;
+        }
+        if (q.origin) s += similarity(q.origin, l.origin) * 3;
+        if (!q.dest && !q.origin) s += 0.1;
+        if (q.side) s += l.side === q.side || l.side === "both" ? 0.5 : -1;
+        return { lineup: l, score: Math.round(s * 100) / 100 };
+      }
       if (q.side) s += l.side === q.side || l.side === "both" ? 0.5 : -1;
-      if (q.dest) s += Math.max(similarity(q.dest, l.dest) * 4, similarity(q.dest, l.name || "") * 3);
+      if (q.dest) {
+        const d = Math.max(similarity(q.dest, l.dest) * 4, similarity(q.dest, l.name || "") * 3);
+        // A landing was named and this one's nothing like it: not a candidate at all.
+        s += d < 1 ? -6 : d;
+      }
       if (q.origin) s += similarity(q.origin, l.origin) * 3;
       if (q.spawn) s += l.spawn === q.spawn ? 3 : -4;
       if (!q.dest && !q.origin) s += 0.1; // only a type or map: all equal-ish
@@ -204,4 +226,18 @@ export function matchRequest(lineups, request, { map: contextMap = null, side: c
   const max = (q.type ? 2 : 0) + (q.side ? 0.5 : 0) + (q.dest ? 4 : 0) + (q.origin ? 3 : 0) + (q.spawn ? 3 : 0) || 1;
   const confident = Boolean(first) && first.score >= max * 0.55 && (!second || first.score - second.score >= 0.4);
   return { query: { ...q, map }, results: scored, best: first?.lineup ?? null, confident };
+}
+
+// Your custom names: "lineup, bazinga". entries: [{ lineup, name }]. The best
+// match that's close enough (or null).
+export function matchName(entries, text) {
+  const t = normalise(text);
+  if (!t) return null;
+  let best = null;
+  for (const e of entries) {
+    const n = normalise(e.name);
+    const s = n === t ? 1 : similarity(t, e.name);
+    if (s >= 0.85 && (!best || s > best.score)) best = { ...e, score: s };
+  }
+  return best;
 }

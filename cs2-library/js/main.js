@@ -13,6 +13,7 @@ import { setupScreen } from "./screens/setup.js";
 import { voiceScreen } from "./screens/voice.js";
 import { meScreen } from "./screens/me.js";
 import { spawnsScreen } from "./screens/spawns.js";
+import { contentScreen } from "./screens/content.js";
 import { mountVoicePill } from "./ui/voicePill.js";
 import "./services/assistant.js"; // acts on voice requests from any tab
 import { initAccount, onAccount, accountState, signIn, signOut } from "./services/account.js";
@@ -35,8 +36,12 @@ const links = NAV.map((n) =>
 );
 // Who you are: sign in for favourites (and adding, if you're a contributor).
 const who = h("div", { class: "side__who" });
+// Content manager: yours only, so only when you're signed in.
+const contentLink = h("a", { class: "side__link side__content", href: "#/content", hidden: true }, icon("list", { size: 20 }), h("span", null, "Content manager"));
 function paintWho() {
   const a = accountState();
+  contentLink.hidden = !a.user;
+  contentLink.classList.toggle("is-active", /^\/content/.test(currentPath()));
   if (!cloudAvailable() || a.status === "offline") return who.replaceChildren(); // accounts unreachable: nothing to offer
   if (!a.user) {
     return who.replaceChildren(
@@ -61,6 +66,7 @@ onAccount(paintWho);
 side.append(
   h("div", { class: "side__brand" }, h("img", { src: "./icons/icon.svg", alt: "", width: 34, height: 34 }), h("span", null, "CS2 Library")),
   h("nav", { class: "side__nav" }, links),
+  contentLink,
   who,
   h("a", { class: "side__back", href: "../" }, icon("back", { size: 18 }), h("span", null, "Reech's Toolbox"))
 );
@@ -78,6 +84,7 @@ scrim.addEventListener("click", () => setOpen(false));
 function markActive() {
   const path = currentPath();
   NAV.forEach((n, i) => links[i].classList.toggle("is-active", n.match.test(path)));
+  contentLink.classList.toggle("is-active", /^\/content/.test(path));
   setOpen(false);
 }
 window.addEventListener("hashchange", markActive);
@@ -96,6 +103,7 @@ defineRoutes(
     ["/voice", voiceScreen],
     ["/me", meScreen],
     ["/spawns/:map", spawnsScreen],
+    ["/content", contentScreen],
   ],
   { mount: document.getElementById("app") }
 );

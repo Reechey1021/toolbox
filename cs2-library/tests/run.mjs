@@ -1,9 +1,9 @@
 // node cs2-library/tests/run.mjs
-import { parseGetpos, worldToRadar, radarToWorld, levelFor, suggestName, filterLineups, missingFor, authorsOf, permissionsFor, cleanPlayback, groupBySpot, areaRadius, throwTags, throwLabel } from "../js/data/lineups.js";
+import { parseGetpos, worldToRadar, radarToWorld, levelFor, suggestName, filterLineups, missingFor, authorsOf, permissionsFor, cleanPlayback, groupBySpot, areaRadius, throwTags, throwLabel, groupName, nameClash, itemName } from "../js/data/lineups.js";
 import { SPAWNS } from "../js/data/spawns.js";
 import { defaultLabels } from "../js/services/labels.js";
 import { mapById, MAPS } from "../js/data/maps.js";
-import { afterWake, normalise, parseRequest, matchRequest, controlFor, similarity, contextFor, WAKE_WORDS, wakeById, numberFrom } from "../js/data/voice.js";
+import { afterWake, normalise, parseRequest, matchRequest, controlFor, similarity, contextFor, WAKE_WORDS, wakeById, numberFrom, matchName } from "../js/data/voice.js";
 
 let passed = 0, failed = 0;
 const eq = (a, b, msg) => (JSON.stringify(a) === JSON.stringify(b) ? passed++ : (failed++, console.log("  FAIL", msg, "\n       expected", JSON.stringify(b), "got", JSON.stringify(a))));
@@ -50,8 +50,8 @@ eq(afterWake("what a round that was"), null, "no wake word");
 eq(afterWake("lineup"), "", "just the wake word (then you ask)");
 eq(normalise("Molly on firebox from see tea spawn"), "molotov on firebox from ct spawn", "speech quirks normalised");
 eq(normalise("flashbang for A-site"), "flash for a site", "flashbang and A-site");
-eq(parseRequest("mirage window smoke from ct spawn"), { map: "de_mirage", type: "smoke", side: null, dest: "window", origin: "ct spawn", spawn: null }, "a full request");
-eq(parseRequest("dust two long doors smoke"), { map: "de_dust2", type: "smoke", side: null, dest: "long doors", origin: "", spawn: null }, "Dust II by ear");
+eq(parseRequest("mirage window smoke from ct spawn"), { map: "de_mirage", type: "smoke", side: null, dest: "window", origin: "ct spawn", spawn: null, group: false }, "a full request");
+eq(parseRequest("dust two long doors smoke"), { map: "de_dust2", type: "smoke", side: null, dest: "long doors", origin: "", spawn: null, group: false }, "Dust II by ear");
 eq(parseRequest("ct side molly into banana").side, "CT", "a side");
 eq(parseRequest("ct side molly into banana").dest, "banana", "and its landing");
 eq([controlFor("close"), controlFor("next one"), controlFor("slow mo"), controlFor("window smoke")], ["close", "next", "slower", null], "clip controls");
@@ -78,7 +78,7 @@ m = matchRequest(LIB, "dust two long doors smoke", { map: "de_mirage" });
 eq(m.best?.id, "d1", "a map said out loud beats the one on screen");
 eq(matchRequest(LIB, "flash a site").best?.id, "f1", "a flash for A site");
 
-eq(parseRequest("t spawn to window smoke"), { map: null, type: "smoke", side: null, dest: "window", origin: "t spawn", spawn: null }, "'X to Y' is from X, landing at Y");
+eq(parseRequest("t spawn to window smoke"), { map: null, type: "smoke", side: null, dest: "window", origin: "t spawn", spawn: null, group: false }, "'X to Y' is from X, landing at Y");
 eq(parseRequest("smoke to window").dest, "window", "'smoke to window' still lands at window");
 eq(contextFor("I'm on mirage"), { map: "de_mirage" }, "I'm on Mirage");
 eq(contextFor("I'm on mirage ct side"), { map: "de_mirage", side: "CT" }, "Mirage CT side");
@@ -141,6 +141,23 @@ near(areaRadius(mapById("de_mirage"), { type: "smoke" }), 144 / 5 / 1024 * 1000,
 ok(areaRadius(mapById("de_mirage"), { type: "he" }) > areaRadius(mapById("de_mirage"), { type: "smoke" }), "HE bigger than smoke");
 ok(areaRadius(mapById("de_mirage"), { type: "molotov", side: "CT" }) < areaRadius(mapById("de_mirage"), { type: "molotov", side: "T" }), "incendiary a touch smaller");
 eq(areaRadius(mapById("de_mirage"), { type: "flash" }), 0, "flashes: no area");
+
+// ---------------------------------------------------------------- groups and names
+eq([groupName("A site execute"), groupName("B smokes group"), groupName("")], ["A site execute Group", "B smokes Group", ""], "group names always end in Group");
+const GR = { id: "g1", map: "de_anubis", type: "group", side: "T", origin: "Mid", name: "B smokes Group", from: { x: 0.5, y: 0.5 }, items: [{ id: "i1", type: "smoke", dest: "B Site", to: { x: 0.2, y: 0.2 } }, { id: "i2", type: "molotov", dest: "Palace", to: { x: 0.3, y: 0.2 } }] };
+eq(missingFor(GR), [], "a complete group");
+ok(missingFor({ ...GR, items: [{ id: "x", type: "smoke" }] }).some((m) => m.includes("utility 1")), "a group's utility needs its landing");
+eq(itemName({ type: "smoke", dest: "B Site" }), "B Site smoke", "a utility's name");
+const REG = { id: "r1", map: "de_anubis", type: "smoke", side: "T", origin: "Mid", dest: "B Site", name: "B Site smoke from Mid" };
+eq(matchRequest([GR, REG], "b site smoke", { map: "de_anubis" }).best?.id, "r1", "no 'group' said: groups stay out");
+eq(matchRequest([GR, REG], "b smokes group", { map: "de_anubis" }).best?.id, "g1", "'group' said: the group");
+const NAMES = [{ id: "a", name: "Bazinga", map: "de_mirage", side: "T" }];
+ok(nameClash(NAMES, { id: "b", map: "de_mirage", side: "T" }, "bazinga"), "one Bazinga on Mirage T");
+ok(nameClash(NAMES, { id: "b", map: "de_mirage", side: "both" }, "Bazinga"), "a both-sides lineup clashes too");
+eq([nameClash(NAMES, { id: "b", map: "de_mirage", side: "CT" }, "Bazinga"), nameClash(NAMES, { id: "b", map: "de_dust2", side: "T" }, "Bazinga"), nameClash(NAMES, { id: "a", map: "de_mirage", side: "T" }, "Bazinga")], [null, null, null], "fine on CT, another map, or renaming the same one");
+eq(matchName([{ lineup: { id: "a" }, name: "Bazinga" }, { lineup: { id: "b" }, name: "Fast window" }], "fast window")?.lineup.id, "b", "a custom name by voice");
+eq(matchName([{ lineup: { id: "a" }, name: "Bazinga" }], "window smoke"), null, "only a close match counts");
+eq(matchRequest([REG], "palace smoke", { map: "de_anubis" }).results.filter((r) => r.score > 1).length, 0, "a landing that's nothing like it isn't offered");
 
 // ---------------------------------------------------------------- throws
 eq(throwTags({ throw: "wm1jump" }), { type: ["left"], speed: [], tap: ["w", "jump"] }, "an old throw translates (nothing wiped)");

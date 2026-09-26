@@ -95,6 +95,7 @@ export function authorsOf(list) {
 
 // What's missing before a lineup can be saved (empty list = ready).
 export function missingFor(l) {
+  if (l?.type === "group") return missingForGroup(l);
   const out = [];
   if (!l.map) out.push("a map");
   if (!l.type) out.push("the grenade type");
@@ -154,4 +155,42 @@ export function areaRadius(map, l) {
   const units = l.type === "molotov" && l.side === "CT" ? 137 : AREA_UNITS[l.type];
   if (!units || !map?.overview?.scale) return 0;
   return (units / map.overview.scale / RADAR) * 1000;
+}
+
+// ---------------------------------------------------------------- utility groups
+// One spot, one clip, several utilities: { type: "group", items: [{ id, type, name,
+// dest, to, arc, throws }] }. Named "... Group".
+export const isGroup = (l) => l?.type === "group";
+export function groupName(name) {
+  const n = String(name || "").replace(/\s+/g, " ").trim();
+  if (!n) return "";
+  return /\bgroup$/i.test(n) ? n.replace(/group$/i, "Group") : `${n} Group`;
+}
+export function missingForGroup(l) {
+  const out = [];
+  if (!l.map) out.push("a map");
+  if (!l.side) out.push("the side");
+  if (!l.origin) out.push("where it's thrown from (callout)");
+  if (!onRadar(l.from)) out.push("the throw spot on the map");
+  const items = l.items || [];
+  if (!items.length) out.push("at least one utility");
+  items.forEach((it, i) => {
+    if (!it.dest) out.push(`where utility ${i + 1} lands (callout)`);
+    if (!onRadar(it.to)) out.push(`utility ${i + 1}'s landing on the map`);
+  });
+  return out;
+}
+// "Window smoke" for a group's utility.
+export function itemName(it) {
+  return it.name || [it.dest, { smoke: "smoke", flash: "flash", molotov: "molotov", he: "HE" }[it.type]].filter(Boolean).join(" ");
+}
+
+// ---------------------------------------------------------------- custom names
+// Your own names for lineups. One name per map and side: a both-sides lineup
+// clashes with T and with CT. names: [{ id, name, map, side }]
+const sidesOf = (s) => (s === "both" ? ["T", "CT"] : [s]);
+export function nameClash(names, lineup, name) {
+  const n = String(name || "").trim().toLowerCase();
+  if (!n) return null;
+  return names.find((x) => x.id !== lineup.id && x.map === lineup.map && x.name.trim().toLowerCase() === n && sidesOf(x.side).some((s) => sidesOf(lineup.side).includes(s))) ?? null;
 }

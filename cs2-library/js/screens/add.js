@@ -8,8 +8,8 @@ import { icon } from "../ui/icons.js";
 import { segmented, openSheet, toast } from "../ui/components.js";
 import { navigate, currentQuery } from "../ui/router.js";
 import { MAPS, mapById } from "../data/maps.js";
-import { TYPES, SIDES, PURPOSES, THROW_GROUPS } from "../data/tags.js";
-import { parseGetpos, worldToRadar, levelFor, onRadar, suggestName, missingFor, areaRadius, throwTags } from "../data/lineups.js";
+import { TYPES, SIDES, PURPOSES, THROW_GROUPS, GRENADES, GROUP_MAX } from "../data/tags.js";
+import { parseGetpos, worldToRadar, levelFor, onRadar, suggestName, missingFor, areaRadius, throwTags, throwLabel, groupName, itemName } from "../data/lineups.js";
 import { getLabels } from "../services/labels.js";
 import { prefs } from "../services/store.js";
 import { getLineup, saveLineup, clipUrl, customCallouts, addCallout, saveTarget, canEdit } from "../services/library.js";
@@ -107,19 +107,19 @@ export async function addScreen(params = {}) {
   const nameInput = h("input", { class: "field", type: "text", maxlength: 80, placeholder: "Suggested from the tags", value: l.name, "aria-label": "Name", oninput: (e) => ((l.name = e.target.value), (nameEdited = Boolean(e.target.value))) });
   function suggest() {
     if (nameEdited) return;
-    l.name = suggestName(l);
+    l.name = l.type === "group" ? (l.origin ? groupName(`${l.origin} utility`) : "") : suggestName(l);
     nameInput.value = l.name;
   }
 
   const originWrap = h("div");
   const destWrap = h("div");
-  async function calloutSelect(key, label) {
+  async function calloutSelect(key, label, obj = l, after = suggest) {
     const map = mapById(l.map);
     const custom = (await customCallouts(l.map)).map((c) => c.name);
     // Callouts placed on the map (the callout builder) join the list too.
     const placed = (await getLabels(l.map)).map((c) => c.text);
     const names = [...new Map([...map.callouts, ...custom, ...placed].map((n) => [n.toLowerCase(), n])).values()].sort((a, b) => a.localeCompare(b));
-    if (l[key] && !names.includes(l[key])) names.push(l[key]);
+    if (obj[key] && !names.includes(obj[key])) names.push(obj[key]);
     return h(
       "select",
       {
@@ -130,17 +130,17 @@ export async function addScreen(params = {}) {
             const name = await askCallout(map.name);
             if (name) {
               await addCallout(l.map, name, l.author);
-              l[key] = name;
-              suggest(); // the new callout belongs in the suggested name too
+              obj[key] = name;
+              after(); // the new callout belongs in the suggested name too
             }
-            return renderCallouts();
+            return obj === l ? renderCallouts() : renderGroup();
           }
-          l[key] = e.target.value;
-          suggest();
+          obj[key] = e.target.value;
+          after();
         },
       },
       h("option", { value: "" }, "Choose…"),
-      names.map((n) => h("option", { value: n, selected: l[key] === n }, n)),
+      names.map((n) => h("option", { value: n, selected: obj[key] === n }, n)),
       h("option", { value: NEW }, "Add a new callout…")
     );
   }
@@ -215,12 +215,82 @@ export async function addScreen(params = {}) {
     });
     replaceChildren(spawnWrap, spawnPick.el);
   }
+  // ---------------------------------------------------------------- a utility group
+  // Up to 10 utilities from one spot, one clip. Add them in the order they're
+  // thrown in the clip. Each card saves (and collapses) on its own.
+  const newItem = () => ({ id: `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, type: "smoke", name: "", dest: "", to: null, arc: [], throws: { type: [], speed: [], tap: [] } });
+  if (l.type === "group" && !(l.items || []).length) l.items = [newItem()];
+  let openItem = l.type === "group" && editing ? -1 : 0;
+  const groupBox = h("div", { class: "group" });
+  function openCard(i) {
+    openItem = i;
+    if (onRadar(l.from)) step = 1; // straight to its landing
+    renderGroup();
+    renderMarks();
+    renderStep();
+  }
+  async function renderGroup() {
+    if (!isGroupMode()) return replaceChildren(groupBox);
+    const items = l.items;
+    const cards = await Promise.all(
+      items.map(async (it, i) => {
+        const colour = TYPES.find((t) => t.id === it.type)?.colour;
+        if (i !== openItem) {
+          return h(
+            "div",
+            { class: "groupitem is-closed" },
+            h("span", { class: "groupitem__n num", style: { background: colour } }, i + 1),
+            h("span", { class: "groupitem__sum" }, h("strong", null, itemName(it) || "Utility"), throwLabel(it) ? h("span", { class: "muted" }, ` \u00b7 ${throwLabel(it)}`) : null, !it.to ? h("span", { class: "groupitem__warn" }, " \u00b7 no landing yet") : null),
+            h("button", { class: "btn btn--quiet groupitem__btn", type: "button", onclick: () => openCard(i) }, "Edit"),
+            items.length > 1 ? h("button", { class: "icon-btn", type: "button", "aria-label": `Remove utility ${i + 1}`, onclick: () => (items.splice(i, 1), (openItem = -1), renderGroup(), renderMarks(), renderStep()) }, icon("close", { size: 16 })) : null
+          );
+        }
+        const nameIn = h("input", { class: "field", type: "text", maxlength: 60, value: it.name, placeholder: itemName({ ...it, name: "" }) || "e.g. Window smoke", "aria-label": `Utility ${i + 1} name`, oninput: (e) => (it.name = e.target.value) });
+        return h(
+          "div",
+          { class: "groupitem is-open" },
+          h("div", { class: "groupitem__head" }, h("span", { class: "groupitem__n num", style: { background: colour } }, i + 1), h("strong", null, `Utility ${i + 1}`)),
+          field("Grenade", segmented({ label: "Grenade", value: it.type, options: GRENADES.map((t) => ({ value: t.id, label: t.name })), className: "seg--wrap", onChange: (v) => ((it.type = v), renderGroup(), renderMarks()) })),
+          field("Lands at", await calloutSelect("dest", `Utility ${i + 1} lands at`, it, () => (nameIn.placeholder = itemName({ ...it, name: "" })))),
+          field("Throw", throwPicker(it)),
+          field("Name", nameIn, "Suggested from where it lands. Change it if you like."),
+          h("p", { class: ["groupitem__land", it.to ? "is-done" : ""].join(" ") }, it.to ? "\u2713 Landing placed (move it on the map)" : "Now tap where it lands on the map \u2192"),
+          h(
+            "button",
+            {
+              class: "btn btn--primary groupitem__save",
+              type: "button",
+              onclick: () => {
+                if (!it.dest) return toast("Choose where it lands (the callout).", { tone: "bad" });
+                if (!it.to) return toast("Tap where it lands on the map.", { tone: "bad" });
+                openItem = -1;
+                renderGroup();
+                renderMarks();
+                renderStep();
+              },
+            },
+            "Save utility"
+          )
+        );
+      })
+    );
+    replaceChildren(
+      groupBox,
+      h("p", { class: "group__hint" }, "Add utilities in the order they're thrown in the clip."),
+      ...cards,
+      openItem === -1 && items.length < GROUP_MAX ? h("button", { class: "btn btn--quiet group__add", type: "button", onclick: () => (items.push(newItem()), openCard(items.length - 1)) }, icon("plus", { size: 18 }), h("span", { class: "btn__label" }, `Add utility (${items.length} of ${GROUP_MAX})`)) : null
+    );
+  }
+
   const map0 = mapById(l.map);
   const canvas = createMapCanvas({ radar: l.level === "lower" && map0.lowerRadar ? map0.lowerRadar : map0.radar, label: "Place the lineup", onTap: (pos) => place(pos) });
   const stepper = h("div", { class: "stepper3" });
   const stepBody = h("div", { class: "stepbody" });
   const levelWrap = h("div");
-  const unlocked = (i) => i === 0 || (i === 1 && onRadar(l.from)) || (i === 2 && onRadar(l.from) && onRadar(l.to));
+  const isGroupMode = () => l.type === "group";
+  // What the Landing and Bounces steps place: the lineup, or the group's open utility.
+  const tgt = () => (isGroupMode() ? l.items?.[openItem] ?? null : l);
+  const unlocked = (i) => i === 0 || (i === 1 && onRadar(l.from) && Boolean(tgt())) || (i === 2 && onRadar(l.from) && onRadar(tgt()?.to));
 
   function place(pos) {
     if (!onRadar(pos)) return;
@@ -228,16 +298,20 @@ export async function addScreen(params = {}) {
     if (key === "from") {
       l.from = pos;
       l.world = null; // placed by hand now
-    } else if (key === "to") {
-      l.to = pos;
-      l.worldTo = null;
-    } else l.arc = [...l.arc, pos];
+    } else {
+      const t = tgt();
+      if (!t) return;
+      if (key === "to") (t.to = pos), (t.worldTo = null);
+      else t.arc = [...(t.arc || []), pos];
+      if (isGroupMode()) renderGroup();
+    }
     renderMarks();
     renderStep();
   }
 
   // As on the library map: the grenade's icon where it's thrown, its area (to scale) where it lands.
   function renderMarks() {
+    if (isGroupMode()) return renderGroupMarks();
     const colour = TYPES.find((t) => t.id === l.type)?.colour ?? "#fff";
     const pts = [l.from, ...l.arc, l.to].filter(Boolean);
     const r = l.to ? areaRadius(mapById(l.map), l) : 0;
@@ -250,6 +324,26 @@ export async function addScreen(params = {}) {
       ...(l.to && !r ? [dot(l.to, "mark mark--to", 9, { stroke: colour })] : []),
       ...(l.from ? [nadeBadge(l.type, l.from, { cls: "mark mark--from" })] : [])
     );
+    canvas.refresh();
+  }
+
+  // A group: every utility's landing and path; the open one stands out.
+  function renderGroupMarks() {
+    const lines = [];
+    const marks = [];
+    (l.items || []).forEach((it, i) => {
+      if (!it.to) return;
+      const colour = TYPES.find((t) => t.id === it.type)?.colour ?? "#fff";
+      const focus = i === openItem ? " is-focus" : " is-dim";
+      const r = areaRadius(mapById(l.map), { ...it, side: l.side });
+      if (r) lines.push(svgEl("circle", { cx: it.to.x * 1000, cy: it.to.y * 1000, r, class: `mark mark--to lu-area lu-area--${it.type}${focus}`, fill: colour, stroke: colour, "data-w": 2 }));
+      else marks.push(dot(it.to, "mark mark--to", 9, { stroke: colour }));
+      if (l.from) lines.push(pathLine([l.from, ...(it.arc || []), it.to], `lu-path${focus}`, 3));
+    });
+    (tgt()?.arc || []).forEach((p) => marks.push(dot(p, "mark mark--arc", 5)));
+    if (l.from) marks.push(nadeBadge("group", l.from, { cls: "mark mark--from" }));
+    canvas.layers.lines.replaceChildren(...lines);
+    canvas.layers.marks.replaceChildren(...marks);
     canvas.refresh();
   }
 
@@ -279,7 +373,7 @@ export async function addScreen(params = {}) {
 
   function renderStep() {
     const s = STEPS[step];
-    const done = [onRadar(l.from), onRadar(l.to), l.arc.length > 0];
+    const done = [onRadar(l.from), onRadar(tgt()?.to), (tgt()?.arc?.length ?? 0) > 0];
     replaceChildren(
       stepper,
       h("button", { class: "icon-btn stepper3__arrow", type: "button", "aria-label": "Previous step", disabled: step === 0, onclick: () => ((step = Math.max(0, step - 1)), renderStep()) }, icon("back")),
@@ -342,11 +436,34 @@ export async function addScreen(params = {}) {
   }
 
   // ---------------------------------------------------------------- choosing things
-  const typeSeg = segmented({ label: "Grenade", value: l.type, options: TYPES.map((t) => ({ value: t.id, label: t.name })), className: "seg--wrap seg--nades", onChange: (v) => ((l.type = v), suggest(), renderMarks()) });
+  const typeSeg = segmented({
+    label: "Grenade",
+    value: l.type,
+    options: TYPES.map((t) => ({ value: t.id, label: t.id === "group" ? "Group" : t.name })),
+    className: "seg--wrap seg--nades",
+    onChange: (v) => {
+      l.type = v;
+      if (v === "group" && !(l.items || []).length) (l.items = [newItem()]), (openItem = 0);
+      renderMode();
+      suggest();
+      renderMarks();
+      renderStep();
+    },
+  });
+  // Group or single: which fields show.
+  function renderMode() {
+    const g = isGroupMode();
+    for (const el of [throwField, destField]) el.hidden = g;
+    groupSec.hidden = !g;
+    nameLabel.textContent = g ? "Group name" : "Name";
+    nameHint.textContent = g ? "Saved with \u201cGroup\u201d on the end, e.g. \u201cA site execute Group\u201d." : "Suggested from the tags. Change it if you like.";
+    renderGroup();
+  }
   const sideSeg = segmented({ label: "Side", value: l.side, options: SIDES.map((s) => ({ value: s.id, label: s.name })), onChange: (v) => ((l.side = v), (l.spawn = null), renderSpawnPick(), renderMarks()) });
   // How it's thrown: tags from three groups, as many as apply from each (or none).
-  l.throws = throwTags(l);
-  const throwPick = h(
+  function throwPicker(obj) {
+    obj.throws = throwTags(obj);
+    return h(
     "div",
     { class: "throwpick" },
     THROW_GROUPS.map((g) =>
@@ -361,8 +478,8 @@ export async function addScreen(params = {}) {
             h("input", {
               type: "checkbox",
               "data-throw": `${g.id}:${t.id}`,
-              checked: l.throws[g.id].includes(t.id),
-              onchange: (e) => (l.throws[g.id] = e.target.checked ? [...l.throws[g.id], t.id] : l.throws[g.id].filter((x) => x !== t.id)),
+              checked: obj.throws[g.id].includes(t.id),
+              onchange: (e) => (obj.throws[g.id] = e.target.checked ? [...obj.throws[g.id], t.id] : obj.throws[g.id].filter((x) => x !== t.id)),
             }),
             h("span", { class: "fcheck__box", "aria-hidden": "true" }),
             h("span", { class: "fcheck__label" }, t.name)
@@ -370,7 +487,9 @@ export async function addScreen(params = {}) {
         )
       )
     )
-  );
+    );
+  }
+  const throwPick = throwPicker(l);
   const mapSel = h(
     "select",
     {
@@ -407,7 +526,17 @@ export async function addScreen(params = {}) {
     const btn = saveBtn;
     btn.disabled = true;
     try {
-      if (!l.name) l.name = suggestName(l) || "Untitled lineup";
+      if (isGroupMode()) {
+        // A group: its name ends in "Group"; the first utility stands in for "where it lands".
+        l.name = groupName(l.name || `${l.origin} utility`);
+        l.items = l.items.map(({ id, type, name, dest, to, arc, throws }) => ({ id, type, name: name || "", dest, to, arc: arc || [], throws }));
+        l.to = l.items[0].to;
+        l.arc = [];
+        l.dest = l.items[0].dest;
+      } else {
+        delete l.items;
+        if (!l.name) l.name = suggestName(l) || "Untitled lineup";
+      }
       prefs.set("author", l.author);
       prefs.set("lastMap", l.map);
       const target = saveTarget();
@@ -425,6 +554,11 @@ export async function addScreen(params = {}) {
   const saveBtn = h("button", { class: "btn btn--primary btn--block", type: "button", onclick: save }, editing ? "Save changes" : "Save lineup");
 
   // A plain container, not a <label>: a label around several buttons forwards every click to the first one.
+  const throwField = h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, "Throw"), throwPick);
+  const destField = h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, "Lands at"), destWrap);
+  const nameLabel = h("span", { class: "addfield__label" }, "Name");
+  const nameHint = h("span", { class: "addfield__hint muted" }, "Suggested from the tags. Change it if you like.");
+  const groupSec = h("section", { class: "addsec" }, h("h2", { class: "addsec__title" }, "Utilities in this group"), groupBox);
   const field = (label, control, hint = null) => h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, label), control, hint ? h("span", { class: "addfield__hint muted" }, hint) : null);
 
   await renderCallouts();
@@ -432,7 +566,8 @@ export async function addScreen(params = {}) {
   renderMarks();
   renderStep();
   renderSpawnPick();
-  suggest();
+  renderMode();
+  if (!(editing && isGroupMode())) suggest();
 
   const el = h(
     "main",
@@ -452,14 +587,15 @@ export async function addScreen(params = {}) {
           field("Map", mapSel),
           field("Grenade", typeSeg),
           field("Side", sideSeg),
-          field("Throw", throwPick),
+          throwField,
           field("Thrown from", originWrap),
-          field("Lands at", destWrap),
+          destField,
           field("Purpose", purposeSel),
           field("Author", authorInput),
-          field("Name", nameInput, "Suggested from the tags. Change it if you like."),
+          h("div", { class: "addfield" }, nameLabel, nameInput, nameHint),
           field("Notes", notesInput)
-        )
+        ),
+        groupSec
       ),
       h(
         "div",

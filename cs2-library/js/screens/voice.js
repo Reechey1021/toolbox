@@ -27,12 +27,16 @@ export async function voiceScreen() {
   // What you're playing: requests assume this map and side.
   const mapSel = h("select", { class: "field select", "aria-label": "Map you're playing", onchange: (e) => setVoiceContext({ map: e.target.value }) });
   const sideSel = h("select", { class: "field select", "aria-label": "Side you're on", onchange: (e) => setVoiceContext({ side: e.target.value }) });
+  // Categories: voice only looks through what this shows.
+  const catSel = h("select", { class: "field select", "aria-label": "Categories", onchange: (e) => setVoiceContext({ category: e.target.value }) });
   function paintContext() {
     const c = voiceContext();
     mapSel.replaceChildren(h("option", { value: "" }, "The map on screen"), ...MAPS.map((m) => h("option", { value: m.id, selected: c.map === m.id }, m.name)));
     sideSel.replaceChildren(...[["", "Either side"], ["T", "T side"], ["CT", "CT side"]].map(([v, n]) => h("option", { value: v, selected: c.side === v }, n)));
     mapSel.value = c.map;
     sideSel.value = c.side;
+    catSel.replaceChildren(...[["all", "Show all"], ["favs", "Show favourites only"], ["named", "Show custom names only"], ["both", "Show favourites & named only"]].map(([v, n]) => h("option", { value: v, selected: c.category === v }, n)));
+    catSel.value = c.category;
   }
   paintContext();
   const ctxHint = h("p", { class: "muted" });
@@ -125,7 +129,7 @@ export async function voiceScreen() {
   async function paintMapSide() {
     const c = voiceContext();
     const k = `${c.map}|${c.side}`;
-    if (k === shownKey) return;
+    if (k === shownKey) return panel?.setCategory(c.category);
     shownKey = k;
     panel?.destroy();
     spawnP?.destroy();
@@ -134,7 +138,7 @@ export async function voiceScreen() {
     if (!map) {
       return replaceChildren(mapSide, h("div", { class: "vmapcol__empty" }, h("p", null, "Pick a map under \u201cWhat you're playing\u201d and it shows here, with its lineups and spawns."), h("p", { class: "muted" }, "Requests on this tab stick to that map and side. The voice pill on other tabs listens for anything.")));
     }
-    panel = createMapPanel(map, { tools: "compact", side: c.side || null });
+    panel = createMapPanel(map, { tools: "compact", side: c.side || null, category: c.category });
     // The map's name and its toolbar share one row, level with the page heading.
     const top = h("div", { class: "vmapcol__top" }, h("h2", { class: "vmapcol__title" }, map.name, c.side ? h("span", { class: `sidetag sidetag--${c.side === "T" ? "t" : "ct"}` }, c.side) : null));
     const parts = [top, panel.el];
@@ -164,7 +168,7 @@ export async function voiceScreen() {
           "section",
           { class: "addsec" },
           h("h2", { class: "addsec__title" }, "What you're playing"),
-          h("div", { class: "vctx" }, h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, "Map"), mapSel), h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, "Side"), sideSel)),
+          h("div", { class: "vctx" }, h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, "Map"), mapSel), h("div", { class: "addfield" }, h("span", { class: "addfield__label" }, "Side"), sideSel), h("div", { class: "addfield vctx__wide" }, h("span", { class: "addfield__label" }, "Categories"), catSel)),
           ctxHint
         ),
         h("section", { class: "addsec" }, h("h2", { class: "addsec__title" }, "Last request"), lastBox),

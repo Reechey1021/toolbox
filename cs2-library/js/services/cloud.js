@@ -85,6 +85,8 @@ async function createFirebase(config) {
       return (await all("users", uid, "cs2Favourites")).map((d) => d.id);
     },
     setFavourite: (uid, id, on) => (on ? f.setDoc(ref("users", uid, "cs2Favourites", id), { at: Date.now() }) : f.deleteDoc(ref("users", uid, "cs2Favourites", id))),
+    listNames: async (uid) => all("users", uid, "cs2Names"),
+    setName: (uid, id, data) => (data ? f.setDoc(ref("users", uid, "cs2Names", id), plain(data)) : f.deleteDoc(ref("users", uid, "cs2Names", id))),
     async getPrefs(uid) {
       const s = await f.getDoc(ref("users", uid, "cs2Prefs", "playback"));
       return s.exists() ? s.data() : null;
@@ -188,6 +190,16 @@ function createFake() {
       return later();
     },
     getPrefs: (uid) => later(read().prefs?.[uid] ?? null),
+    listNames: (uid) => later(Object.entries(read().names?.[uid] ?? {}).map(([id, v]) => ({ id, ...v }))),
+    setName(uid, id, data) {
+      const d = read();
+      d.names ??= {};
+      d.names[uid] ??= {};
+      if (data) d.names[uid][id] = plain(data);
+      else delete d.names[uid][id];
+      write(d);
+      return later();
+    },
     getSpawns: (id) => later(read().spawns?.[id] ?? null),
     getLabels: (map) => later(read().labels?.[map] ?? null),
     saveLabels(map, data) {

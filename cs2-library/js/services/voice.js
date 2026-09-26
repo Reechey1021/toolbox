@@ -49,13 +49,15 @@ export function saveVoiceSettings(next) {
 
 // What you're playing: the map and side requests assume. Set on the Voice tab or by
 // saying "lineup, I'm on Mirage CT side". map "" = the map on screen; side "" = either.
+// category: "all" | "favs" | "named" | "both" (favourites and named).
 export function voiceContext() {
-  return { map: prefs.get("voiceMap", ""), side: prefs.get("voiceSide", "") };
+  return { map: prefs.get("voiceMap", ""), side: prefs.get("voiceSide", ""), category: prefs.get("voiceCategory", "all") };
 }
 export function setVoiceContext(next) {
   const c = { ...voiceContext(), ...next };
   prefs.set("voiceMap", c.map);
   prefs.set("voiceSide", c.side);
+  prefs.set("voiceCategory", c.category);
   emit({ type: "context", context: c });
 }
 

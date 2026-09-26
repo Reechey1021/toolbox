@@ -6,6 +6,14 @@ A lineup library for Counter-Strike 2: every smoke, flash, molotov and HE on a z
 
 Put this folder in `reechs-toolbox/` next to `darts/`, so you have `reechs-toolbox/cs2-library/`. With VS Code's Live Server running, open `/cs2-library/`.
 
+## Names, favourites, groups
+
+- **Custom names**: while a clip plays, type your own name for it (next to Favourite). One name per map and side. Say it ("lineup, bazinga") to open it; its callouts still work too.
+- **Favourites** show a yellow star on the map (bottom-right of the icon) and in the spot menu.
+- **Content manager** (signed in, above your profile): your uploads, favourites and named lineups, with their own filters.
+- **Utility groups**: choose **Group** as the grenade to add up to 10 utilities from one spot and one clip, each with its own grenade, landing, callout, throw and name (add them in the order they're thrown). Groups have their own icon and filter; the clip shows which utility lands where. By voice, a group only comes up when you say "group" (or its name).
+- **Voice tab categories**: show all, favourites, named, or both. On the Voice tab, voice only searches what the map shows.
+
 ## Sharing and accounts
 
 Anyone with the link can browse the library and watch clips. **Sign in with Google** (bottom of the menu) to keep **favourites** (a ★ on the clip, and a ★ Favourites filter on each map). **Contributors** can add lineups: you're the admin, and you choose contributors by email in **Settings**. Only whoever added a lineup can edit it; they can delete it, and so can the admin (to clean up), but nobody else. **SETUP.md** walks through the one-off setup: the security rules (`firestore.rules`, with your email in it), free clip hosting on Cloudinary (`js/config/clips-config.js`), and choosing contributors. Until then, everything works on this device as before; lineups saved on this device can be published to the shared library later from Setup.

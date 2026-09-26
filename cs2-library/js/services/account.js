@@ -5,8 +5,9 @@
 // do that (see SETUP.md).
 
 import { getCloud, cloudAvailable } from "./cloud.js";
+import { nameClash } from "../data/lineups.js";
 
-let state = { status: cloudAvailable() ? "loading" : "off", user: null, access: null, favourites: new Set() };
+let state = { status: cloudAvailable() ? "loading" : "off", user: null, access: null, favourites: new Set(), names: new Map() };
 const listeners = new Set();
 export const accountState = () => ({ ...state, contributor: isContributor(), admin: isAdmin() });
 export function onAccount(fn) {
@@ -32,8 +33,8 @@ export async function initAccount() {
   cloud.onUser(async (u) => {
     state = { ...state, user: u, status: "loading" };
     emit();
-    const [access, favs] = await Promise.all([cloud.getAccess().catch(() => null), u ? cloud.listFavourites(u.uid).catch(() => []) : []]);
-    state = { ...state, access, favourites: new Set(favs), status: u ? "signed-in" : "guest" };
+    const [access, favs, names] = await Promise.all([cloud.getAccess().catch(() => null), u ? cloud.listFavourites(u.uid).catch(() => []) : [], u ? cloud.listNames(u.uid).catch(() => []) : []]);
+    state = { ...state, access, favourites: new Set(favs), names: new Map(names.map((n) => [n.id, n])), status: u ? "signed-in" : "guest" };
     emit();
   });
 }
@@ -73,6 +74,26 @@ export function removeContributor(email) {
 }
 
 export const isFavourite = (id) => state.favourites.has(id);
+
+// Your own name for a lineup ("" for none), and every name you've given.
+export const customName = (id) => state.names.get(id)?.name ?? "";
+export const customNames = () => [...state.names.values()];
+
+// Name a lineup (empty clears it). One name per map and side: a clash is refused.
+export async function setCustomName(lineup, name) {
+  if (!state.user) throw new Error("Sign in to name lineups.");
+  const clean = String(name || "").replace(/\s+/g, " ").trim().slice(0, 40);
+  const clash = clean && nameClash(customNames(), lineup, clean);
+  if (clash) throw new Error(`You've already called another ${lineup.side === "both" ? "" : lineup.side + " "}lineup on this map \u201c${clash.name}\u201d.`);
+  const cloud = await getCloud();
+  const data = clean ? { name: clean, map: lineup.map, side: lineup.side } : null;
+  await cloud.setName(state.user.uid, lineup.id, data);
+  const names = new Map(state.names);
+  data ? names.set(lineup.id, { id: lineup.id, ...data }) : names.delete(lineup.id);
+  state = { ...state, names };
+  emit();
+  return clean;
+}
 export async function toggleFavourite(id) {
   if (!state.user) throw new Error("Sign in to keep favourites.");
   const cloud = await getCloud();

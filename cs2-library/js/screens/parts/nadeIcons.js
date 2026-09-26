@@ -34,6 +34,16 @@ export const NADE_PATHS = {
     ],
     cut: ["M10 9h1.6v1.6H10zM12.4 9H14v1.6h-1.6zM10 12h1.6v1.6H10zM12.4 12H14v1.6h-1.6zM10 15h1.6v1.6H10zM12.4 15H14v1.6h-1.6z"], // the holes
   },
+  // A utility group: a bundle of three canisters.
+  group: {
+    fill: [
+      "M3.5 10.5a1.2 1.2 0 0 1 1.2-1.2h3.4a1.2 1.2 0 0 1 1.2 1.2v8.3a1.2 1.2 0 0 1-1.2 1.2H4.7a1.2 1.2 0 0 1-1.2-1.2z",
+      "M9.4 6.2a1.2 1.2 0 0 1 1.2-1.2h2.8a1.2 1.2 0 0 1 1.2 1.2v12.6a1.2 1.2 0 0 1-1.2 1.2h-2.8a1.2 1.2 0 0 1-1.2-1.2z",
+      "M14.7 10.5a1.2 1.2 0 0 1 1.2-1.2h3.4a1.2 1.2 0 0 1 1.2 1.2v8.3a1.2 1.2 0 0 1-1.2 1.2h-3.4a1.2 1.2 0 0 1-1.2-1.2z",
+      "M4.8 7.6h3v1.4h-3zM10.6 3.3h2.8v1.4h-2.8zM16.2 7.6h3v1.4h-3z",
+    ],
+    cut: [],
+  },
   molotov: {
     fill: [
       "M10.6 6.2h2.8v3.3l1.9 2.9v8.1a1.4 1.4 0 0 1-1.4 1.4h-3.8a1.4 1.4 0 0 1-1.4-1.4v-8.1l1.9-2.9z", // bottle
@@ -66,7 +76,19 @@ function paths(parent, type, colour, cutColour) {
 
 // On the map: a badge at pos (0 to 1). mapCanvas keeps it the same size on screen.
 // count > 1: a small numbered circle on its top-right (several lineups on one spot).
-export function nadeBadge(type, pos, { cls = "", attrs = {}, count = 0 } = {}) {
+// A five-pointed star centred on (cx, cy).
+function starPath(cx, cy, R, r) {
+  let d = "";
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rad = i % 2 ? r : R;
+    d += `${i ? "L" : "M"}${(cx + rad * Math.cos(a)).toFixed(2)} ${(cy + rad * Math.sin(a)).toFixed(2)}`;
+  }
+  return d + "Z";
+}
+
+// fav: a yellow star on its bottom-right (one of your favourites).
+export function nadeBadge(type, pos, { cls = "", attrs = {}, count = 0, fav = false } = {}) {
   const colour = typeById(type)?.colour ?? "#fcf0d6";
   const g = document.createElementNS(NS, "g");
   g.setAttribute("class", `nadeicon ${cls}`.trim());
@@ -92,6 +114,12 @@ export function nadeBadge(type, pos, { cls = "", attrs = {}, count = 0 } = {}) {
     for (const [k, v] of Object.entries({ x: 13.5, y: -12.5, class: "spot__count", "text-anchor": "middle", "dominant-baseline": "central" })) n.setAttribute(k, String(v));
     n.textContent = String(count);
     g.append(pip, n);
+  }
+  if (fav) {
+    const star = document.createElementNS(NS, "path");
+    star.setAttribute("d", starPath(13, 13, 8, 3.6));
+    star.setAttribute("class", "spot__star");
+    g.append(star);
   }
   return g;
 }

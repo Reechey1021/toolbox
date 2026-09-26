@@ -12,10 +12,11 @@ import { h, replaceChildren } from "../../ui/dom.js";
 import { switchRow } from "../../ui/components.js";
 import { icon } from "../../ui/icons.js";
 import { TYPES, typeById } from "../../data/tags.js";
-import { filterLineups, authorsOf, groupBySpot, areaRadius, throwLabel } from "../../data/lineups.js";
+import { filterLineups, authorsOf, groupBySpot, areaRadius, throwLabel, itemName } from "../../data/lineups.js";
 import { prefs } from "../../services/store.js";
 import { listLineups, onLibraryChange } from "../../services/library.js";
-import { accountState, onAccount, isFavourite } from "../../services/account.js";
+import { accountState, onAccount, isFavourite, customName } from "../../services/account.js";
+import { categoryOk } from "../../services/assistant.js";
 import { seedDemo } from "../../services/demo.js";
 import { createMapCanvas, pathLine, dot, svgEl } from "./mapCanvas.js";
 import { nadeBadge, nadeIconEl } from "./nadeIcons.js";
@@ -31,7 +32,17 @@ function mostCommonType(items) {
   return items.map((l) => l.type).sort((a, b) => n[b] - n[a])[0];
 }
 
-export function createMapPanel(map, { tools = "full", side = null } = {}) {
+// A group, shown in the Landing view: one entry per utility, each opening the group.
+function expandGroups(list) {
+  return list.flatMap((l) =>
+    l.type === "group"
+      ? (l.items || []).filter((it) => it.to).map((it, i) => ({ ...l, id: `${l.id}#${it.id}`, parent: l, type: it.type, to: it.to, arc: it.arc || [], dest: it.dest, name: `${i + 1}. ${itemName(it)}`, items: null }))
+      : [l]
+  );
+}
+const real = (l) => l.parent ?? l;
+
+export function createMapPanel(map, { tools = "full", side = null, category = "all" } = {}) {
   const saved = prefs.get("filters", {});
   const f = {
     types: new Set(saved.types ?? TYPES.map((t) => t.id)),
@@ -127,7 +138,11 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
     renderLabels();
   }
 
-  const shown = () => filterLineups(all, f).filter((l) => (l.level || "upper") === f.level && (!favsOnly() || isFavourite(l.id)));
+  let cat = category;
+  const shown = () => {
+    const list = filterLineups(all, f).filter((l) => (l.level || "upper") === f.level && (!favsOnly() || isFavourite(l.id)) && categoryOk(l, cat));
+    return f.view === "to" ? expandGroups(list) : list;
+  };
 
   function renderDots() {
     const list = shown();
@@ -140,14 +155,14 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
         const el = svgEl("g", { class: ["spot", one ? "spot--one" : "spot--many"].join(" "), "data-group": i, tabindex: 0, role: "button", "aria-label": one ? one.name : `${g.items.length} lineups here` });
         // One lineup: its grenade. Several: the most common grenade there, with the count on its corner.
         const type = one ? one.type : mostCommonType(g.items);
-        el.append(nadeBadge(type, g.pos, { attrs: one ? { "data-id": one.id } : {}, count: g.items.length }));
+        el.append(nadeBadge(type, g.pos, { attrs: one ? { "data-id": one.id } : {}, count: g.items.length, fav: g.items.some((l) => isFavourite(real(l).id)) }));
         el.addEventListener("pointerenter", (e) => e.pointerType === "mouse" && !pinned && showMenu(i));
         el.addEventListener("pointerleave", (e) => e.pointerType === "mouse" && !pinned && hideSoon());
         el.addEventListener("focus", () => showMenu(i));
         el.addEventListener("keydown", (e) => {
           if (e.key !== "Enter" && e.key !== " ") return;
           e.preventDefault();
-          if (g.items.length === 1) return openPlayer(g.items[0]);
+          if (g.items.length === 1) return openPlayer(real(g.items[0]));
           showMenu(i, { pin: true });
           menu.querySelector(".spotcard")?.focus();
         });
@@ -163,7 +178,10 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
   // Where it lands, the grenade's rough area, to scale; flashes have none, so a small ring.
   function drawPaths(g, focus = null) {
     const lines = [];
-    for (const l of g.items) {
+    for (const l0 of g.items) {
+      // A group (in the Throwing view): each of its utilities, from the same spot.
+      const parts = l0.type === "group" ? (l0.items || []).filter((it) => it.to).map((it) => ({ ...l0, id: l0.id, type: it.type, to: it.to, arc: it.arc || [] })) : [l0];
+      for (const l of parts) {
       const path = [l.from, ...(l.arc || []), l.to];
       const pts = f.view === "from" ? path : [...path].reverse();
       const cls = focus === null ? "" : focus === l.id ? " is-focus" : " is-dim";
@@ -172,6 +190,7 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
       if (r) lines.push(svgEl("circle", { cx: l.to.x * 1000, cy: l.to.y * 1000, r, class: `lu-area lu-area--${l.type}${cls}`, fill: colour, stroke: colour, "data-w": 2 }));
       lines.push(pathLine(pts, `lu-path lu-path--${l.type}${cls}`, focus === l.id ? 4 : 3));
       if (!r) lines.push(dot(l.to, `lu-end lu-end--${l.type}${cls}`, 7, { stroke: colour }));
+      }
     }
     canvas.layers.lines.replaceChildren(...lines);
     canvas.refresh();
@@ -181,18 +200,18 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
     const sideTag = l.side === "both" ? ["T/CT", "both"] : [l.side, l.side === "T" ? "t" : "ct"];
     const el = h(
       "button",
-      { class: "spotcard", type: "button", role: "menuitem", onclick: () => (hideMenu(), openPlayer(l)) },
+      { class: "spotcard", type: "button", role: "menuitem", onclick: () => (hideMenu(), openPlayer(real(l))) },
       h(
         "span",
         { class: "spotcard__body" },
-        h("span", { class: "spotcard__title" }, isFavourite(l.id) ? "\u2605 " : "", l.name || "Untitled", l.author ? h("span", { class: "spotcard__by" }, ` by ${l.author}`) : null),
+        h("span", { class: "spotcard__title" }, isFavourite(real(l).id) ? h("span", { class: "favstar", "aria-label": "Favourite" }, "\u2605") : null, customName(real(l).id) ? `${customName(real(l).id)} \u00b7 ` : "", l.name || "Untitled", l.parent ? h("span", { class: "spotcard__by" }, ` in ${l.parent.name}`) : l.author ? h("span", { class: "spotcard__by" }, ` by ${l.author}`) : null),
         h(
           "span",
           { class: "spotcard__tags" },
           h("span", { class: `sidetag sidetag--${sideTag[1]}` }, sideTag[0]),
           l.spawn ? h("span", { class: "callpill callpill--spawn" }, `Spawn ${l.spawn}`) : h("span", { class: "callpill" }, l.origin),
           h("span", { class: "spotcard__arrow", "aria-hidden": "true" }, "\u203a"),
-          h("span", { class: "callpill" }, l.dest),
+          l.type === "group" ? h("span", { class: "callpill callpill--group" }, `${(l.items || []).length} utility`) : h("span", { class: "callpill" }, l.dest),
           throwLabel(l) ? h("span", { class: "spotcard__throw" }, throwLabel(l)) : null
         )
       ),
@@ -202,6 +221,7 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
       for (const c of menu.querySelectorAll(".spotcard")) c.classList.toggle("is-focus", c === el);
       drawPaths(g, l.id);
     };
+    el.dataset.id = real(l).id;
     el.addEventListener("pointerenter", focusIt);
     el.addEventListener("focus", focusIt);
     return el;
@@ -253,7 +273,7 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
     if (!el) return hideMenu();
     const i = Number(el.dataset.group);
     const g = groups[i];
-    if (g.items.length === 1 && (e.pointerType === "mouse" || openSpot === i)) return (hideMenu(), openPlayer(g.items[0]));
+    if (g.items.length === 1 && (e.pointerType === "mouse" || openSpot === i)) return (hideMenu(), openPlayer(real(g.items[0])));
     showMenu(i, { pin: true });
   }
 
@@ -354,7 +374,7 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
         { class: "mapfilters__list" },
         TYPES.map((t) =>
           check(
-            { smoke: "Smoke", flash: "Flashbang", molotov: "Molotov / Incendiary", he: "HE Grenade" }[t.id],
+            { smoke: "Smoke", flash: "Flashbang", molotov: "Molotov / Incendiary", he: "HE Grenade", group: "Utility group" }[t.id],
             f.types.has(t.id),
             (on) => (on ? f.types.add(t.id) : f.types.delete(t.id), changed()),
             nadeIconEl(t.id, 18),
@@ -446,6 +466,11 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
     ready,
     editCallouts: setEditing,
     // The Voice tab changes the side you're on.
+    setCategory(c) {
+      cat = c || "all";
+      hideMenu();
+      renderDots();
+    },
     setSide(s) {
       f.sides = s ? new Set([s]) : new Set(["T", "CT"]);
       hideMenu();

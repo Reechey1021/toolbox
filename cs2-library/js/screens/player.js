@@ -14,7 +14,8 @@ import { confirm, toast, segmented } from "../ui/components.js";
 import { tagLabels } from "../data/lineups.js";
 import { typeById } from "../data/tags.js";
 import { clipUrl, deleteLineup, canEdit, canDelete } from "../services/library.js";
-import { accountState, isFavourite, toggleFavourite } from "../services/account.js";
+import { accountState, isFavourite, toggleFavourite, customName, setCustomName } from "../services/account.js";
+import { itemName } from "../data/lineups.js";
 import { playback, setPlayback, savedWhere } from "../services/playback.js";
 
 // The clip that's open, if any (voice controls act on it).
@@ -172,6 +173,31 @@ export async function openPlayer(l) {
   });
   paintFav();
 
+  // Your own name for it (any lineup, favourite or not). One per map and side.
+  const nameInput = h("input", { class: "field player__cname", type: "text", maxlength: 40, placeholder: "Custom name", value: customName(l.id), "aria-label": "Custom name" });
+  const saveName = async () => {
+    if (nameInput.value.trim() === customName(l.id)) return;
+    try {
+      const n = await setCustomName(l, nameInput.value);
+      toast(n ? `Named \u201c${n}\u201d: say it to open this one` : "Custom name removed", { tone: "ok" });
+    } catch (err) {
+      toast(err.message, { tone: "bad", ms: 4200 });
+      nameInput.value = customName(l.id);
+    }
+  };
+  nameInput.addEventListener("change", saveName);
+  nameInput.addEventListener("keydown", (e) => (e.stopPropagation(), e.key === "Enter" && nameInput.blur()));
+
+  // A group: which utility lands where, in the order they're thrown.
+  const strip =
+    l.type === "group" && (l.items || []).length
+      ? h(
+          "ol",
+          { class: "player__strip", "aria-label": "In this clip" },
+          l.items.map((it, i) => h("li", { class: "player__stripitem", style: { "--c": typeById(it.type)?.colour } }, h("span", { class: "player__stripn num" }, i + 1), itemName(it)))
+        )
+      : null;
+
   const setpos = l.world ? `setpos ${l.world.x} ${l.world.y} ${l.world.z}${l.world.pitch !== null ? `;setang ${l.world.pitch} ${l.world.yaw} 0` : ""}` : null;
   const layer = h(
     "div",
@@ -189,6 +215,7 @@ export async function openPlayer(l) {
       h(
         "div",
         { class: "player__stage" },
+        strip,
         url ? (isImage ? img : video) : h("div", { class: "player__noclip" }, h("p", null, "No clip for this lineup yet."), canEdit(l) ? h("a", { class: "btn btn--quiet", href: `#/add/${l.id}` }, "Add one") : null),
         url ? h("div", { class: "player__magwrap" }, mag, magLabel) : null,
         settings // floats over the clip, so the window never grows past the screen
@@ -220,6 +247,7 @@ export async function openPlayer(l) {
             )
           : null,
         h("span", { class: "player__spacer" }),
+        accountState().user ? nameInput : null,
         accountState().user ? favBtn : null,
         canEdit(l) ? h("a", { class: "btn btn--quiet player__btn", href: `#/add/${l.id}`, onclick: () => close() }, icon("edit", { size: 18 }), h("span", { class: "btn__label" }, "Edit")) : null,
         canDelete(l)

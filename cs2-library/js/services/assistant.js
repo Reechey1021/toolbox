@@ -5,7 +5,11 @@
 
 import { onVoice, beep, voiceContext, setVoiceContext, armVoice } from "./voice.js";
 import { listLineups } from "./library.js";
-import { matchRequest, controlFor, contextFor, numberFrom } from "../data/voice.js";
+import { matchRequest, controlFor, contextFor, numberFrom, matchName } from "../data/voice.js";
+import { filterLineups } from "../data/lineups.js";
+import { prefs } from "./store.js";
+import { preferences } from "./playback.js";
+import { isFavourite, customName, accountState } from "./account.js";
 import { mapById } from "../data/maps.js";
 import { setShowCallouts } from "./labels.js";
 import { openPlayer, activePlayer } from "../screens/player.js";
@@ -32,6 +36,21 @@ function scope() {
   return { map: /^\/library\/([a-z0-9_]+)/.exec(currentPath())?.[1] ?? activePlayer()?.lineup.map ?? null, side: null };
 }
 let lastOpened = null; // for "again" once the clip has closed
+
+// What the Voice tab's map is showing (elsewhere: everything).
+export function categoryOk(l, category) {
+  const fav = isFavourite(l.id);
+  const named = Boolean(customName(l.id));
+  return category === "favs" ? fav : category === "named" ? named : category === "both" ? fav || named : true;
+}
+function inScope(list) {
+  if (!onVoiceTab()) return list;
+  const saved = prefs.get("filters", {});
+  const types = saved.types ? new Set(saved.types) : null;
+  const authors = saved.authors ? new Set(saved.authors) : null;
+  const favsOnly = Boolean(accountState().user && preferences().favsOnly);
+  return filterLineups(list, { types, authors }).filter((l) => categoryOk(l, voiceContext().category) && (!favsOnly || isFavourite(l.id)));
+}
 
 export async function handleRequest(texts) {
   const text = texts[0];
@@ -79,8 +98,16 @@ export async function handleRequest(texts) {
     return;
   }
 
+  // On the Voice tab, only what its map shows: the category, the Filters, favourites-only.
+  const lineups = inScope(await listLineups());
+  // Your custom names first: "lineup, bazinga".
+  const named = lineups.map((l) => ({ lineup: l, name: customName(l.id) })).filter((e) => e.name);
+  const byName = texts.map((t) => matchName(named, t)).filter(Boolean).sort((a, b) => b.score - a.score)[0];
+  if (byName) {
+    last = { text, query: null, results: [{ lineup: byName.lineup, score: 99 }], index: 0, outcome: "" };
+    return showResult(0);
+  }
   // Every alternative transcription gets a go; the best top score wins.
-  const lineups = await listLineups();
   let pick = null;
   for (const t of texts) {
     const m = matchRequest(lineups, t, scope());
