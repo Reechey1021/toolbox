@@ -50,7 +50,12 @@ export async function homeScreen() {
     h(
       "header",
       { class: "home__bar" },
-      h("a", { class: "brand", href: "#/", "aria-label": "Reech Darts home" }, brandMark(26), h("span", { class: "wordmark" }, "Reech Darts")),
+      h(
+        "div",
+        { class: "home__brandrow" },
+        h("a", { class: "icon-btn home__toolbox", href: "../", "aria-label": "Reech's Toolbox" }, icon("back")),
+        h("a", { class: "brand", href: "#/", "aria-label": "Reech Darts home" }, brandMark(26), h("span", { class: "wordmark" }, "Reech Darts"))
+      ),
       h(
         "div",
         { class: "home__actions" },

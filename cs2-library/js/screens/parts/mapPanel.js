@@ -25,6 +25,12 @@ import { customCallouts } from "../../services/library.js";
 import { openSheet, toast } from "../../ui/components.js";
 import { preferences, setPreferences, onPlayback } from "../../services/playback.js";
 
+function mostCommonType(items) {
+  const n = {};
+  for (const l of items) n[l.type] = (n[l.type] ?? 0) + 1;
+  return items.map((l) => l.type).sort((a, b) => n[b] - n[a])[0];
+}
+
 export function createMapPanel(map, { tools = "full", side = null } = {}) {
   const saved = prefs.get("filters", {});
   const f = {
@@ -132,12 +138,9 @@ export function createMapPanel(map, { tools = "full", side = null } = {}) {
       ...groups.map((g, i) => {
         const one = g.items.length === 1 ? g.items[0] : null;
         const el = svgEl("g", { class: ["spot", one ? "spot--one" : "spot--many"].join(" "), "data-group": i, tabindex: 0, role: "button", "aria-label": one ? one.name : `${g.items.length} lineups here` });
-        el.append(one ? nadeBadge(one.type, g.pos, { attrs: { "data-id": one.id } }) : dot(g.pos, "lu lu--many", 11, { fill: "#fcf0d6" }));
-        if (!one) {
-          const t = svgEl("text", { x: g.pos.x * 1000, y: g.pos.y * 1000, "data-fs": 12, class: "spot__count", "text-anchor": "middle", "dominant-baseline": "central" });
-          t.textContent = String(g.items.length);
-          el.append(t);
-        }
+        // One lineup: its grenade. Several: the most common grenade there, with the count on its corner.
+        const type = one ? one.type : mostCommonType(g.items);
+        el.append(nadeBadge(type, g.pos, { attrs: one ? { "data-id": one.id } : {}, count: g.items.length }));
         el.addEventListener("pointerenter", (e) => e.pointerType === "mouse" && !pinned && showMenu(i));
         el.addEventListener("pointerleave", (e) => e.pointerType === "mouse" && !pinned && hideSoon());
         el.addEventListener("focus", () => showMenu(i));

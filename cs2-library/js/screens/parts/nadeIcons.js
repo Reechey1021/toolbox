@@ -65,7 +65,8 @@ function paths(parent, type, colour, cutColour) {
 }
 
 // On the map: a badge at pos (0 to 1). mapCanvas keeps it the same size on screen.
-export function nadeBadge(type, pos, { cls = "", attrs = {} } = {}) {
+// count > 1: a small numbered circle on its top-right (several lineups on one spot).
+export function nadeBadge(type, pos, { cls = "", attrs = {}, count = 0 } = {}) {
   const colour = typeById(type)?.colour ?? "#fcf0d6";
   const g = document.createElementNS(NS, "g");
   g.setAttribute("class", `nadeicon ${cls}`.trim());
@@ -83,6 +84,15 @@ export function nadeBadge(type, pos, { cls = "", attrs = {} } = {}) {
   inner.setAttribute("transform", "scale(1.2) translate(-12 -12)");
   paths(inner, type, colour, "#071820");
   g.append(inner);
+  if (count > 1) {
+    // A rounded square drawn as a circle (keeps the one-circle-per-spot shape of the map).
+    const pip = document.createElementNS(NS, "rect");
+    for (const [k, v] of Object.entries({ x: 5, y: -21, width: 17, height: 17, rx: 8.5, class: "spot__pip" })) pip.setAttribute(k, String(v));
+    const n = document.createElementNS(NS, "text");
+    for (const [k, v] of Object.entries({ x: 13.5, y: -12.5, class: "spot__count", "text-anchor": "middle", "dominant-baseline": "central" })) n.setAttribute(k, String(v));
+    n.textContent = String(count);
+    g.append(pip, n);
+  }
   return g;
 }
 

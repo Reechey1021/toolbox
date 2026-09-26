@@ -2289,3 +2289,12 @@
   padding: 0 var(--s3);
   flex: none;
 }
+
+
+/* The way back to the toolbox, beside the brand. */
+.home__brandrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -8px;
+}

@@ -183,7 +183,7 @@ export async function addScreen(params = {}) {
   // Each step unlocks once the one before it is done.
   const STEPS = [
     { key: "from", title: "Throw spot", tap: "Tap where it's thrown from, or paste getpos from that spot.", getpos: true },
-    { key: "to", title: "Landing", tap: "Tap where it lands, or paste getpos from the landing spot for pinpoint accuracy.", getpos: true },
+    { key: "to", title: "Landing", tap: "Tap where it lands.", getpos: false },
     { key: "arc", title: "Bounces", tap: "Optional: tap each bounce in order. Clear them to start again.", getpos: false },
   ];
   let step = 0;
@@ -251,6 +251,8 @@ export async function addScreen(params = {}) {
   }
 
   function applyGetpos(text, note) {
+    // getpos is for the throw spot only (paste and change can both fire: act once).
+    if (STEPS[step].key !== "from") return;
     const g = parseGetpos(text);
     if (!g) return (note.textContent = "That doesn't look like getpos output. It starts with \u201csetpos\u201d.");
     const map = mapById(l.map);
