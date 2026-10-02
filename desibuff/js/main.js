@@ -16,7 +16,7 @@ import { coursesScreen, openCourse } from "./screens/courses.js";
 import { profileScreen, openRidePage } from "./screens/profile.js";
 import { showRaceResult, showFreeroamResult, showSaveTrack, showRecovery, showGpsInfo, showHeartRate, showWakeInfo, openSettings } from "./screens/sheets.js";
 
-const VERSION = "1.0.1";
+const VERSION = "1.0.2";
 const DEFAULT_SETTINGS = { maxHr: 170, voice: true, kmVoice: true, autoFinish: true, raceMap: true, simGps: false, simKmh: 25, simCourseId: "reservoir_cw", simHr: false };
 const ORDINALS = ["", "Első", "Második", "Harmadik", "Negyedik", "Ötödik", "Hatodik", "Hetedik", "Nyolcadik", "Kilencedik", "Tizedik"];
 

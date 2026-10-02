@@ -6,7 +6,7 @@
 //   Map tiles: network first, cached copy when offline.
 // Bump VERSION when files are added or renamed.
 
-const VERSION = "desibuff-1.0.1";
+const VERSION = "desibuff-1.0.2";
 const APP = [
   "./", "./index.html", "./manifest.webmanifest", "./css/app.css",
   "./js/main.js", "./js/ui/dom.js", "./js/ui/layers.js", "./js/ui/map.js", "./js/ui/charts.js",
