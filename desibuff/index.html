@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="hu">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>DesiBuff</title>
+    <meta name="description" content="Kerékpáros fedélzeti computer: sebesség, pályák, rekordok, pulzus." />
+    <meta name="theme-color" content="#040817" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Home-screen app: opens full screen with no browser bars.
+         DesiBuff has its own manifest, so it installs as its own app with its own icon;
+         inside the toolbox app it also stays full screen. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DesiBuff" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@500;600;700&display=swap" />
+    <link rel="stylesheet" href="./css/app.css" />
+  </head>
+  <body>
+    <div id="app">
+      <main id="view"><p id="boot" class="boot-note">DesiBuff indul…</p></main>
+      <nav id="tabs" class="tabs" aria-label="Fő menü"></nav>
+    </div>
+    <div id="layers"></div>
+    <div id="toasts-top" class="toasts top" aria-live="assertive"></div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <noscript><p class="boot-note">A DesiBuffhoz be kell kapcsolni a JavaScriptet.</p></noscript>
+    <script>
+      // Opened by double-clicking the file? Browsers block the app's modules there.
+      if (location.protocol === "file:") {
+        document.getElementById("view").innerHTML =
+          '<div class="boot-note"><h1>Run it from a local server</h1>' +
+          "<p>Browsers won't load the app straight from a file. In the toolbox folder, run " +
+          "<code>python3 -m http.server 8000</code>, then open " +
+          "<code>http://localhost:8000/desibuff/</code>. The README has more.</p></div>";
+      }
+    </script>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
