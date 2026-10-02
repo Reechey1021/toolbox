@@ -8,6 +8,20 @@ import { trackSvg } from "../ui/map.js";
 import { fmtTime, fmt1, fmtSigned } from "../engine/format.js";
 import { gpsQuality } from "../services/gps.js";
 import { hasHungarianVoice, speak, beep } from "../services/voice.js";
+import { zoneLimits, setLimit, ZONE_NAMES, ZONE_COLORS, zoneFill, zoneOf } from "../engine/zones.js";
+
+/** A button that repeats while held (to walk a number up or down quickly). */
+function holdButton(label, ariaLabel, fn) {
+  let t1 = null, t2 = null;
+  const stop = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; };
+  return h("button", {
+    "aria-label": ariaLabel,
+    onPointerdown: (e) => { e.preventDefault(); fn(); stop(); t1 = setTimeout(() => { t2 = setInterval(fn, 70); }, 420); },
+    onPointerup: stop, onPointerleave: stop, onPointercancel: stop,
+    onKeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } },
+    onContextmenu: (e) => e.preventDefault(),
+  }, label);
+}
 
 const line = (label, value) => h("div", { class: "row" }, h("span", { class: "txt" }, label), h("span", { class: "num", style: { fontSize: "30px", fontWeight: 700, whiteSpace: "nowrap" } }, value));
 
@@ -192,7 +206,7 @@ export function openSettings(app) {
 
   openPage({
     title: "Beállítások",
-    render: (body) => {
+    render: (body, page) => {
       const voiceNote = hasHungarianVoice() ? null : h("p", { class: "help" }, "Ezen az eszközön nincs magyar felolvasó hang, ezért csak sípolás lesz. Telefonon: Beállítások → Általános kezelés → Szövegfelolvasó → Google, nyelv: magyar.");
       const courseSel = h("select", { class: "input", style: { fontSize: "21px" }, "aria-label": "Szimulált útvonal",
         onChange: (e) => { S.simCourseId = e.target.value; app.saveSettings(); if (S.simGps) app.restartGps(); } },
@@ -200,7 +214,8 @@ export function openSettings(app) {
       put(body, h("div", { class: "section" },
         h("h2", {}, "Pulzus"),
         h("button", { class: "btn secondary small", style: { width: "100%" }, onClick: () => app.openHeartRate() }, icon("heart", { filled: true }), app.hr.status === "on" ? `Pulzusmérő: ${app.hr.name || "csatlakozva"}` : "Pulzusmérő csatlakoztatása"),
-        stepper("maxHr", "Maximális pulzus", "A zónákhoz. Ökölszabály: 220 − életkor (50 évesen 170).", 1, 120, 220),
+        zonesSummary(app),
+        h("button", { class: "btn secondary small", style: { width: "100%", marginTop: "10px" }, onClick: () => openZones(app, () => page.refresh()) }, "Zónák testreszabása"),
 
         h("h2", {}, "Hang"),
         sw("voice", "Bemondás", "Visszaszámlálás, részidők, cél"),
@@ -210,7 +225,10 @@ export function openSettings(app) {
 
         h("h2", {}, "Pályafutam"),
         sw("autoFinish", "Automatikus cél", "Az óra magától megáll ott, ahol a legközelebb érsz a célhoz. Nem kell gombot nyomni."),
-        sw("raceMap", "Pályarajz futam közben", "Kis térkép rólad és a rekord menetről"),
+
+        h("h2", {}, "Térkép"),
+        sw("liveMap", "Élő térkép", "A gombok fölötti helyen: merre jársz, a pálya előtted, a rekord menet", () => app.refresh()),
+        sw("wind", "Szél az internetről", "Szélirány és erősség a térkép sarkában, ha van internet"),
 
         h("h2", {}, "Képernyő"),
         h("p", { class: "help" }, "Amíg az app nyitva van, a képernyő ébren marad és nem zárol le magától. Ezt nem lehet kikapcsolni."),
@@ -220,10 +238,89 @@ export function openSettings(app) {
         h("div", { class: "field" }, h("label", {}, "Szimulált útvonal"), courseSel),
         stepper("simKmh", "Szimulált sebesség", "km/h", 5, 5, 120, (v) => app.gps.setSimSpeed(v)),
         sw("simHr", "Szimulált pulzus", "Kitalált pulzus pulzusmérő nélkül", (on) => app.hr.simulate(on)),
+        h("div", { class: "sheet-actions two", style: { marginTop: "12px" } },
+          h("button", { class: "btn primary small", onClick: () => app.runDemo() }, icon("play", { filled: true }), "Bemutató"),
+          h("button", { class: "btn secondary small", onClick: () => { app.stopSimulation(); page.refresh(); } }, "Szimuláció ki")),
+        h("p", { class: "help", style: { marginTop: "8px" } }, "A Bemutató szimulált GPS-szel és pulzussal elindít egy futamot a Reservoir pályán: látszik a térkép, a pulzus, a részidők és a cél."),
 
         h("h2", {}, "Egyéb"),
         h("a", { class: "btn secondary small", href: "../", style: { textDecoration: "none" } }, icon("home"), "Vissza a toolboxba"),
-        h("p", { class: "footer-note" }, `DesiBuff web ${app.version}. Az adatok csak ezen az eszközön vannak.`)));
+        h("p", { class: "footer-note" }, `DesiBuff web ${app.version}. Az adatok csak ezen az eszközön vannak. Térkép: OpenFreeMap, © OpenMapTiles, © OpenStreetMap. Szél: Open-Meteo.com (CC BY 4.0).`)));
+    },
+  });
+}
+
+function zonesSummary(app) {
+  const L = zoneLimits(app.settings);
+  return h("div", { class: "row" }, h("span", { class: "txt" }, "Zónák", h("small", {}, L.custom ? "Saját beállítás" : "A maximális pulzusból számolva")),
+    h("span", { class: "num", style: { fontSize: "22px", fontWeight: 700, textAlign: "right" } }, `${L.starts.join(", ")}, max ${L.max}`));
+}
+
+// ---------- heart-rate zones ----------
+export function openZones(app, onDone) {
+  const S = app.settings;
+  let L = zoneLimits(S);
+  const save = (next, custom = true) => {
+    if (!custom) next = { starts: zoneLimits({ maxHr: next.max }).starts, max: next.max };
+    L = { ...next, custom };
+    S.maxHr = L.max;
+    S.hrZones = custom ? L.starts.slice() : null;
+    app.saveSettings();
+    paint();
+  };
+  const rows = [], preview = h("div", { class: "zone-preview" });
+  const maxVal = h("span", { class: "num" });
+  let testBpm = null;
+
+  function paint() {
+    maxVal.textContent = String(L.max);
+    const ends = [...L.starts.slice(1).map((x) => x - 1), L.max];
+    rows.forEach((r, i) => {
+      r.val.textContent = String(L.starts[i]);
+      r.range.textContent = `${L.starts[i]}–${ends[i]} bpm`;
+    });
+    // a sample bar so he can see what a pulse looks like on the ride screen
+    const bpm = testBpm ?? Math.round((L.starts[3] + L.starts[4]) / 2);
+    const color = ZONE_COLORS[zoneOf(bpm, L)];
+    const fill = zoneFill(bpm, L);
+    preview.replaceChildren(
+      h("div", { class: "zp-head" }, h("span", { class: "num" }, String(bpm)), " bpm így néz ki:"),
+      h("div", { class: "hr-bar" }, ...fill.map((f) => h("i", {}, h("b", { style: { width: `${(f * 100).toFixed(1)}%`, background: color } })))),
+      h("div", { class: "zp-ticks" }, ...L.starts.map((x) => h("span", {}, String(x))), h("span", {}, String(L.max))),
+      h("input", { type: "range", class: "slider", min: Math.max(40, L.starts[0] - 10), max: L.max + 5, value: bpm, "aria-label": "Próba pulzus",
+        onInput: (e) => { testBpm = Number(e.target.value); paint(); } }));
+  }
+
+  openPage({
+    title: "Pulzuszónák",
+    onClose: () => onDone?.(),
+    render: (body, pg) => {
+      rows.length = 0;
+      const list = h("div", {});
+      for (let i = 0; i < 5; i++) {
+        const val = h("span", { class: "num" });
+        const range = h("small");
+        list.append(h("div", { class: "row zone-row" },
+          h("span", { class: "zone-chip", style: { background: ZONE_COLORS[i + 1] } }, String(i + 1)),
+          h("span", { class: "txt" }, ZONE_NAMES[i + 1], range),
+          h("div", { class: "stepper" }, holdButton("−", `${i + 1}. zóna kezdete lejjebb`, () => save(setLimit(L, i, L.starts[i] - 1))), val,
+            holdButton("+", `${i + 1}. zóna kezdete feljebb`, () => save(setLimit(L, i, L.starts[i] + 1))))));
+        rows.push({ val, range });
+      }
+      put(body, h("div", { class: "section" },
+        h("p", { class: "help", style: { marginTop: "12px" } }, "Mindegyik zónánál azt állítod be, hány bpm-nél kezdődik. A zóna a következő kezdetéig tart, az 5. zóna a maximális pulzusig. Tartsd nyomva a − vagy + gombot a gyorsabb állításhoz."),
+        preview,
+        h("h2", {}, "Zónák kezdete"),
+        list,
+        h("div", { class: "row zone-row" },
+          h("span", { class: "zone-chip", style: { background: "#ececec" } }, "♥"),
+          h("span", { class: "txt" }, "Max pulzus", h("small", {}, "220 − életkor (50 évesen 170)")),
+          h("div", { class: "stepper" }, holdButton("−", "Max pulzus lejjebb", () => save(setLimit(L, "max", L.max - 1), L.custom)), maxVal,
+            holdButton("+", "Max pulzus feljebb", () => save(setLimit(L, "max", L.max + 1), L.custom)))),
+        h("p", { class: "help", style: { marginTop: "10px" } }, "Ha még nem állítottál saját zónát, a max pulzus változtatása az összes zónát arányosan átállítja."),
+        h("button", { class: "btn secondary small", style: { width: "100%", marginTop: "12px" }, onClick: () => { const max = L.max; save({ starts: zoneLimits({ maxHr: max }).starts, max }, false); toast("Zónák visszaállítva a max pulzusból."); } }, "Visszaállítás a max pulzusból"),
+        h("button", { class: "btn primary", style: { width: "100%", marginTop: "12px" }, onClick: () => pg.close() }, "Kész")));
+      paint();
     },
   });
 }

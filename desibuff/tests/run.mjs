@@ -10,6 +10,9 @@ import { fmtTime, fmtSigned, fmtDelta, sayDelta } from "../js/engine/format.js";
 import { Repo } from "../js/data/repo.js";
 import { parseBackup, exportBackup } from "../js/data/backup.js";
 import { defaultCourses } from "../js/data/defaults.js";
+import { zoneLimits, zoneOf, zoneFill, setLimit, defaultStarts } from "../js/engine/zones.js";
+import { camera, mercX, mercY, angleDiff, bearingTo, zoomForSpeed } from "../js/engine/camera.js";
+import { windFeel } from "../js/services/wind.js";
 
 let passed = 0;
 const failed = [];
@@ -317,6 +320,43 @@ const androidBackup = {
   check(repo.courseRuns.find((r) => r.id === "course_run_x").courseId === "gone", "an ambiguous name (two courses called the same) is left alone");
   const reloaded = memRepo({ courses: repo.courses, courseRuns: [{ ...repo.courseRuns[0], courseId: "stale" }], freeroamSessions: [] });
   check(reloaded.runsFor("recorded_1741900000000").length === 1, "data imported before this fix is repaired on start-up");
+}
+
+// ---------- heart-rate zones ----------
+{
+  check(JSON.stringify(defaultStarts(170)) === "[85,102,119,136,153]", "default zones from max 170: 85/102/119/136/153");
+  const L = { starts: [90, 105, 120, 135, 150], max: 175 };
+  check(zoneOf(80, L) === 0 && zoneOf(90, L) === 1 && zoneOf(142, L) === 4 && zoneOf(190, L) === 5, "bpm lands in the right zone");
+  // the example from the request: zone 4 runs 120–150, pulse 135 → bar halfway through the 4th segment
+  const ex = zoneFill(135, { starts: [70, 90, 105, 120, 150], max: 175 });
+  check(JSON.stringify(ex) === "[1,1,1,0.5,0]", `135 bpm in a 120–150 zone fills the bar to 3.5 segments (${ex})`);
+  check(zoneFill(200, L).every((f) => f === 1) && zoneFill(60, L).every((f) => f === 0), "above max the bar is full, below zone 1 it's empty");
+  let m = setLimit(L, 2, 200);
+  check(m.starts[2] === 134, "a zone start can't pass the next zone's start");
+  m = setLimit(L, 1, 10);
+  check(m.starts[1] === 91, "…or drop below the previous one");
+  m = setLimit(L, "max", 100);
+  check(m.max === 151, "max heart rate stays above the start of zone 5");
+  check(zoneLimits({ maxHr: 180 }).starts[4] === 162 && zoneLimits({ maxHr: 180, hrZones: [1, 2, 3, 4, 5] }).custom, "custom zones are used when set, otherwise they come from max");
+}
+
+// ---------- live map camera & wind ----------
+{
+  const rider = { lat: 46.393743, lng: 17.818607 };
+  for (const bearing of [0, 37, 90, 181, 270, 359]) {
+    const cam = camera({ rider, bearing, zoom: 16, w: 400, h: 300 });
+    const [x, y] = cam.project(mercX(rider.lng), mercY(rider.lat));
+    const ahead = { lat: rider.lat + 0.0005 * Math.cos(bearing * Math.PI / 180), lng: rider.lng + 0.0005 * Math.sin(bearing * Math.PI / 180) / Math.cos(rider.lat * Math.PI / 180) };
+    const [ax, ay] = cam.project(mercX(ahead.lng), mercY(ahead.lat));
+    if (!(near(x, 200, 0.01) && near(y, 204, 0.01))) failed.push(`blip sits at 50% across, 68% down (bearing ${bearing}: ${x.toFixed(1)}, ${y.toFixed(1)})`);
+    else if (!(near(ax, 200, 1.5) && ay < y - 20)) failed.push(`the direction of travel points straight up (bearing ${bearing}: ${ax.toFixed(1)}, ${ay.toFixed(1)})`);
+    else passed++;
+  }
+  check(angleDiff(350, 10) === 20 && angleDiff(10, 350) === -20 && angleDiff(0, 180) === -180, "turning takes the short way round");
+  check(near(bearingTo({ lat: 46, lng: 17 }, { lat: 46.01, lng: 17 }), 0, 0.01) && near(bearingTo({ lat: 46, lng: 17 }, { lat: 46, lng: 17.01 }), 90, 0.1), "bearings: north is 0°, east is 90°");
+  check(zoomForSpeed(0) > zoomForSpeed(25) && zoomForSpeed(25) > zoomForSpeed(40) && zoomForSpeed(80) === 14.8, "the map zooms out as he speeds up");
+  check(windFeel(0, 0, 15) === "szembeszél" && windFeel(180, 0, 15) === "hátszél" && windFeel(90, 0, 15) === "oldalszél" && windFeel(350, 20, 15) === "szembeszél", "wind from ahead is headwind, from behind tailwind, from the side crosswind");
+  check(windFeel(90, 0, 2) === "szélcsend" && windFeel(90, null, 10) === null, "under 3 km/h it's calm; standing still there's no 'ahead'");
 }
 
 // ---------- formats ----------

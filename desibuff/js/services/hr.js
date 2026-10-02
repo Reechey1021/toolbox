@@ -123,20 +123,11 @@ export function createHeartRate({ onBpm, onStatus }) {
       if (sim) { clearInterval(sim); sim = null; }
       if (!on) { setStatus(device ? status : hrSupported() ? "off" : "unsupported"); return; }
       let phase = 0;
-      sim = setInterval(() => { phase += 0.05; onBpm(Math.round(128 + Math.sin(phase) * 22 + Math.sin(phase * 3.1) * 5), Date.now()); }, 1000);
+      // sweeps slowly from about 95 to 170 bpm, so every zone and the bar get exercised
+      sim = setInterval(() => { phase += 0.04; onBpm(Math.round(132 + Math.sin(phase) * 32 + Math.sin(phase * 3.1) * 6), Date.now()); }, 1000);
       setStatus("on");
     },
   };
 }
 
-/** Heart-rate zones as a share of max heart rate (5-zone model). */
-export function hrZone(bpm, maxHr) {
-  if (!bpm || !maxHr) return 0;
-  const p = bpm / maxHr;
-  if (p < 0.6) return 1;
-  if (p < 0.7) return 2;
-  if (p < 0.8) return 3;
-  if (p < 0.9) return 4;
-  return 5;
-}
-export const ZONE_NAMES = ["", "Pihenő", "Könnyű", "Tempó", "Küszöb", "Maximum"];
+// Zones live in engine/zones.js.

@@ -17,6 +17,10 @@ Lives at `reechs-toolbox/desibuff/` and works on its own: it has its own manifes
 2. Az **új** appban: Profil → **Betöltés fájlból** → válaszd ki a fájlt → **Betöltés**.
 3. Minden átjön: pályák, rekordok, részidők, pályafutamok, szabad menetek. Ha valami nem stimmel: **Utolsó betöltés visszavonása**.
 
+**Élő térkép:** a gombok fölötti helyen. Mindig arra fordul, amerre mész; a zöld vonal mögötted van, a fehér előtted (pályafutamnál). A piros pont vagy piros nyíl a rekord menet. Bal felső sarok: iránytű, jobb felső: szél (ha van internet).
+
+**Pulzuszónák:** Profil → fogaskerék → **Zónák testreszabása**. Mindegyik zónánál beállítod, hány bpm-nél kezdődik.
+
 **Pulzusmérő (CYCPLUS H1):** kapcsold be, tedd fel, majd koppints a felső sávban a szívre → **Csatlakoztatás** → válaszd ki a listából. Minden indításkor egyszer kell csatlakoztatni. Menet közben, ha megszakad, magától újracsatlakozik.
 
 **Képernyő:** amíg az app nyitva van, nem kapcsol ki és nem zárol le magától. A bekapcsológombot nem tudja letiltani.
@@ -27,6 +31,12 @@ Lives at `reechs-toolbox/desibuff/` and works on its own: it has its own manifes
 - **Race screen priorities:** the gap to the record is the biggest thing on screen, and the whole band turns green (ahead) or red (behind). Then speed, time and distance left. A thin course strip shows you, the record ghost and the splits, with an optional small track map.
 - **Pályák (courses):** list, a page per course (map, best times, splits, rename, reorder, delete) and the split editor (slider plus map, equal splits, undo).
 - **Profil:** totals (this week, this month, all time), filterable history, a page per ride (map, sectors, speed, height, heart-rate and delta charts), and import/export.
+- **Live map:** fills the space above the buttons on every ride screen, with rounded corners and softly faded edges. It turns so his direction is always up, glides between GPS fixes and zooms out as he speeds up.
+  - In a race: done part green, rest of the course white, record ghost red (an arrow on the map's edge when it's out of view), splits yellow, finish red and white.
+  - Otherwise: his trail green, nearby courses grey with their starts marked.
+  - Corners: compass (top left) and wind (top right), the wind labelled headwind, tailwind or crosswind against his direction.
+  - The lines, blip, compass and ghost are drawn by the app itself and need no signal. Underneath, a dark label-free street map is added when the phone can load it.
+- **Heart rate:** a big bpm number and a fat five-part bar that fills with the actual pulse: 135 bpm in a 120–150 zone 4 fills half the 4th part. The filled bar takes the zone's colour. Zones are 50/60/70/80/90 % of max heart rate by default, or his own bpm limits via "Zónák testreszabása".
 - **Voice and buzz:** Hungarian call-outs for the countdown, each split ("Második részidő, 3 másodperccel előrébb"), the finish and each km. Uses the phone's own text-to-speech, with beeps and vibration too.
 
 ## Same rules as the Android app
@@ -63,21 +73,34 @@ Saved in IndexedDB on the device (not localStorage, whose ~5 MB is shared with t
 - **iPhone:** no browser on iOS supports Bluetooth, so heart rate is Android (Chrome) only. Everything else works on iPhone.
 - **Screen off:** a web page gets no GPS while the screen is off. The app keeps the screen on, but can't stop the power button.
 - **Bluetooth after a restart:** Chrome asks to pick the heart-rate monitor again after each app restart. Where Chrome allows it, the app reconnects to a known device by itself.
-- **Maps:** OpenStreetMap's own tiles (free, no API key), darkened to match the app. Tiles you've seen are kept for offline use. On the ride screen the course is drawn without a map, so it needs no signal.
+- **Maps:** course and ride pages use OpenStreetMap's own tiles (free, no API key), darkened to match the app. The live map's streets come from OpenFreeMap (free, no key) through the MapLibre library, loaded from a CDN the first time and then cached. Without them, the live map still draws the route, trail, blip, ghost and compass on a dark background. Map data you've seen is kept for offline use.
+- **Wind:** Open-Meteo's forecast for the area, free for personal use and needing no key. It's checked every 15 minutes or after 5 km, only when online. It's a model value for the area, not a measurement on the spot.
 
 ## Testing on a desktop
 
-Settings → **Teszt (asztali géphez)**: **Szimulált GPS** rides the chosen course at the chosen speed, and **Szimulált pulzus** fakes a heart rate. Run it from a local server in the toolbox folder:
+Settings → **Teszt (asztali géphez)**:
+- **Bemutató** starts a simulated race on the Reservoir course with simulated GPS and heart rate: live map, wind, heart-rate bar, splits and the finish, all at once.
+- **Szimulált GPS** and **Szimulált pulzus** switch each one on separately.
+- **Szimuláció ki** turns both off.
+
+Run it from a local server in the toolbox folder:
 
 ```
 python3 -m http.server 8000
 # then open http://localhost:8000/desibuff/
 ```
 
-Logic tests (distance maths, ride rules, races, splits, Android backup round trip):
+Logic tests (distance maths, ride rules, races, splits, Android backup round trip, heart-rate zones, map camera, wind):
 
 ```
 node desibuff/tests/run.mjs
+```
+
+Simulation test in a real browser. It plays the Bemutató at S20 FE screen size with time fast-forwarded, and checks the live map, compass, wind, ghost, heart-rate tile, custom zones and turning the map off. Screenshots go to `desibuff/tests/out/`:
+
+```
+pip install playwright && playwright install chromium
+python3 desibuff/tests/sim.py
 ```
 
 ## Files
@@ -88,10 +111,12 @@ desibuff/
   css/app.css
   icons/      icon.svg, 180/192/512 px PNGs, maskable 512
   js/main.js            starts the app, wires everything up
-  js/engine/            geo.js (distances), ride.js (the rules), sectors.js (splits, delta), format.js
+  js/engine/            geo.js (distances), ride.js (the rules), sectors.js (splits, delta), format.js,
+                        zones.js (heart-rate zones), camera.js (live map maths)
   js/data/              repo.js (courses and rides), backup.js (Android format), defaults.js (Reservoir CW/CCW), store.js (IndexedDB)
-  js/services/          gps.js (plus simulator), hr.js (Bluetooth heart rate), wakelock.js, voice.js
-  js/ui/                dom.js, layers.js (pages, sheets, toasts), map.js (track drawing, tile map), charts.js
+  js/services/          gps.js (plus simulator), hr.js (Bluetooth heart rate), wakelock.js, voice.js, wind.js
+  js/ui/                dom.js, layers.js (pages, sheets, toasts), map.js (track drawing, tile map), minimap.js (live map), charts.js
   js/screens/           ride.js, courses.js, profile.js, sheets.js
-  tests/run.mjs
+  tests/run.mjs         logic tests (Node)
+  tests/sim.py          browser simulation test (Playwright)
 ```

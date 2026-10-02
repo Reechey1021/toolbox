@@ -3,14 +3,16 @@
 //   App files:  network first (a new version shows up as soon as you're online),
 //               falling back to the cached copy when there's no signal.
 //   Fonts: cache first, since they don't change.
-//   Map tiles: network first, cached copy when offline.
+//   Map tiles (OSM pictures, OpenFreeMap street data): network first, cached copy offline.
+//   Map library: cache first.  Wind (Open-Meteo): never cached, always live.
 // Bump VERSION when files are added or renamed.
 
-const VERSION = "desibuff-1.0.2";
+const VERSION = "desibuff-1.1.0";
 const APP = [
   "./", "./index.html", "./manifest.webmanifest", "./css/app.css",
   "./js/main.js", "./js/ui/dom.js", "./js/ui/layers.js", "./js/ui/map.js", "./js/ui/charts.js",
   "./js/engine/geo.js", "./js/engine/ride.js", "./js/engine/sectors.js", "./js/engine/format.js",
+  "./js/engine/zones.js", "./js/engine/camera.js", "./js/ui/minimap.js", "./js/services/wind.js",
   "./js/data/repo.js", "./js/data/backup.js", "./js/data/defaults.js", "./js/data/store.js",
   "./js/services/gps.js", "./js/services/hr.js", "./js/services/wakelock.js", "./js/services/voice.js",
   "./js/screens/ride.js", "./js/screens/courses.js", "./js/screens/profile.js", "./js/screens/sheets.js",
@@ -36,7 +38,7 @@ async function trim(cache) {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
-  if (url.hostname === "tile.openstreetmap.org") {
+  if (url.hostname === "tile.openstreetmap.org" || url.hostname === "tiles.openfreemap.org") {
     // Map tiles: from the network (the browser's own cache follows OSM's headers),
     // falling back to our copy when there's no signal.
     e.respondWith(fetch(e.request).then((res) => {
@@ -45,7 +47,9 @@ self.addEventListener("fetch", (e) => {
     }).catch(() => caches.match(e.request).then((r) => r || Response.error())));
     return;
   }
-  const isAsset = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
+  // fonts and the map library: cache first (pinned versions never change)
+  const isAsset = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com" ||
+    (url.hostname === "cdn.jsdelivr.net" || url.hostname === "unpkg.com") && url.pathname.includes("maplibre-gl@");
   if (isAsset) {
     e.respondWith(caches.open(ASSETS).then(async (cache) => {
       const hit = await cache.match(e.request);

@@ -196,10 +196,7 @@ button { font: inherit; color: inherit; }
 .cell.t3 .val { font-size: var(--t3); }
 .cell .sub { font-size: 18px; color: var(--muted); margin-top: 2px; }
 
-.hr-zone { height: 10px; border-radius: 5px; margin-top: 8px; background: var(--line); overflow: hidden; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
-.hr-zone i { background: #24315f; }
-.hr-zone i.on { background: currentColor; }
-.z1 { color: var(--muted); } .z2 { color: var(--sky); } .z3 { color: var(--neon); } .z4 { color: var(--amber); } .z5 { color: var(--red); }
+.z0, .z1 { color: var(--muted); } .z2 { color: var(--sky); } .z3 { color: var(--neon); } .z4 { color: var(--amber); } .z5 { color: var(--red); }
 
 /* race: the delta band turns the whole width green or red */
 .delta-band {
@@ -241,8 +238,6 @@ button { font: inherit; color: inherit; }
 .strip .ghost { background: var(--red); z-index: 1; }
 .strip .legend { display: flex; justify-content: space-between; font-size: 18px; color: var(--muted); margin-top: 8px; }
 .strip .legend b { color: var(--text); font-family: var(--font-num); font-size: 22px; }
-.mini-track { height: 112px; padding: 6px var(--pad); border-bottom: 1px solid var(--line); }
-.mini-track svg { width: 100%; height: 100%; display: block; }
 
 /* controls sit at the bottom, in thumb reach */
 .controls { margin-top: auto; padding: 12px var(--pad) 14px; display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -446,3 +441,46 @@ button { font: inherit; color: inherit; }
 .footer-note { font-size: 16px; color: var(--muted); text-align: center; padding: 16px; }
 .link { color: var(--neon); font-weight: 600; text-decoration: none; }
 .boot-note { padding: 24px; font-size: 20px; }
+
+/* ---------- heart-rate tile: big number, fat bar that fills with the actual pulse ---------- */
+.cell .sub:empty { display: none; }
+.hr-cell .hr-row { display: flex; align-items: center; gap: 14px; }
+.hr-num { display: flex; align-items: baseline; gap: 6px; flex: none; }
+.hr-num .num { font-size: clamp(64px, 21vw, 96px); font-weight: 700; line-height: 0.9; min-width: 2.6ch; text-align: right; }
+.hr-num small { font-size: 20px; font-weight: 600; color: var(--muted); }
+.hr-side { flex: 1; min-width: 0; }
+.hr-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; height: 30px; margin-top: 8px; }
+.hr-bar i { position: relative; overflow: hidden; border-radius: 7px; background: #1a2550; }
+.hr-bar b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transition: width 0.6s ease, background-color 0.6s; }
+@media (prefers-reduced-motion: reduce) { .hr-bar b { transition: none; } }
+
+/* ---------- the live map: fills the space above the buttons, edges fade softly ---------- */
+.minimap { position: relative; flex: 1 1 0; min-height: 0; margin: 10px var(--pad) 0; border-radius: 18px; overflow: hidden; background: var(--navy); border: 1px solid var(--line); }
+.minimap.mm-tiny { visibility: hidden; border-color: transparent; }
+.mm-view { position: absolute; inset: 0; background: #0a1330;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 8%, #000 92%, transparent 100%);
+  mask-composite: intersect; }
+.mm-base, .mm-ov { position: absolute; inset: 0; }
+.mm-base .maplibregl-canvas { position: absolute; left: 0; top: 0; outline: none; }
+.mm-compass { position: absolute; left: 10px; top: 10px; z-index: 2; width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; background: rgba(4, 8, 23, 0.8); border: 1px solid var(--line); }
+.mm-wind { position: absolute; right: 10px; top: 10px; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 16px; background: rgba(4, 8, 23, 0.8); border: 1px solid var(--line); }
+.mm-wind svg { transition: transform 0.4s; flex: none; }
+.mm-wind .t { display: flex; flex-direction: column; line-height: 1.05; }
+.mm-wind .num { font-size: 24px; font-weight: 700; }
+.mm-wind .w { font-size: 16px; font-weight: 700; color: var(--muted); }
+.mm-wind[data-feel="szembeszél"] .w { color: var(--red); }
+.mm-wind[data-feel="hátszél"] .w { color: var(--neon); }
+.mm-wind[data-feel="oldalszél"] .w { color: var(--amber); }
+.mm-note { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; font-size: 21px; font-weight: 600; color: var(--muted); pointer-events: none; }
+.mm-note:empty { display: none; }
+.mm-attr { position: absolute; right: 10px; bottom: 5px; z-index: 2; font-size: 10px; color: #7f8ab0; pointer-events: none; }
+
+/* ---------- zones page ---------- */
+.zone-row .zone-chip { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 19px; color: #0a1200; }
+.zone-row .txt { flex: 1; min-width: 0; }
+.zone-preview { margin: 6px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.zone-preview .zp-head { font-size: 19px; color: var(--muted); font-weight: 600; }
+.zone-preview .zp-head .num { font-size: 40px; font-weight: 700; color: var(--text); }
+.zp-ticks { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-num); font-size: 17px; color: var(--muted); }

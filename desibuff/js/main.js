@@ -10,14 +10,20 @@ import * as store from "./data/store.js";
 import { createGps } from "./services/gps.js";
 import { createHeartRate } from "./services/hr.js";
 import { createWakeLock } from "./services/wakelock.js";
+import { createWind } from "./services/wind.js";
+import { createMinimap } from "./ui/minimap.js";
+import { dist } from "./engine/geo.js";
 import { speak, beep, buzz, unlockAudio } from "./services/voice.js";
 import { rideScreen } from "./screens/ride.js";
 import { coursesScreen, openCourse } from "./screens/courses.js";
 import { profileScreen, openRidePage } from "./screens/profile.js";
 import { showRaceResult, showFreeroamResult, showSaveTrack, showRecovery, showGpsInfo, showHeartRate, showWakeInfo, openSettings } from "./screens/sheets.js";
 
-const VERSION = "1.0.2";
-const DEFAULT_SETTINGS = { maxHr: 170, voice: true, kmVoice: true, autoFinish: true, raceMap: true, simGps: false, simKmh: 25, simCourseId: "reservoir_cw", simHr: false };
+const VERSION = "1.1.0";
+const DEFAULT_SETTINGS = {
+  maxHr: 170, hrZones: null, voice: true, kmVoice: true, autoFinish: true, liveMap: true, wind: true,
+  simGps: false, simKmh: 25, simCourseId: "reservoir_cw", simHr: false,
+};
 const ORDINALS = ["", "Első", "Második", "Harmadik", "Negyedik", "Ötödik", "Hatodik", "Hetedik", "Nyolcadik", "Kilencedik", "Tizedik"];
 
 async function boot() {
@@ -33,8 +39,19 @@ async function boot() {
     state: { tab: "ride", gpsStatus: "off", wakeState: "off", battery: null, preImport: !!saved.preImport },
   };
 
+  // a trail for the idle screen's map (rides keep their own points)
+  app.breadcrumb = [];
+  app.wind = createWind();
   app.gps = createGps({
-    onFix: (fix) => engine.onFix(fix),
+    onFix: (fix) => {
+      engine.onFix(fix);
+      const b = app.breadcrumb;
+      if (fix.acc <= 30 && (!b.length || dist(b[b.length - 1], fix) >= 6)) {
+        b.push({ lat: fix.lat, lng: fix.lng });
+        if (b.length > 2000) b.splice(0, b.length - 2000);
+      }
+      if (settings.wind !== false) app.wind.maybeFetch(fix);
+    },
     onStatus: (s) => { app.state.gpsStatus = s; },
   });
   app.hr = createHeartRate({
@@ -42,6 +59,7 @@ async function boot() {
     onStatus: () => {},
   });
   app.wake = createWakeLock({ onChange: (s) => { app.state.wakeState = s; } });
+  app.minimap = createMinimap(app);
 
   // ---------- screens & tabs ----------
   const view = document.getElementById("view");
@@ -113,6 +131,28 @@ async function boot() {
       if (snap.mode === "freeroam") engine.finishFreeroam(now());
       else if (snap.mode === "record") engine.stopRecording(finishAt);
     } else toast("Folytatjuk. Jó utat!", { kind: "good" });
+  };
+  // One tap to see everything: a simulated race on the Reservoir course with a
+  // simulated heart rate. Wind and the street map come in for real if online.
+  app.runDemo = () => {
+    if (engine.busy) { toast("Előbb zárd le a mostani menetet."); return; }
+    const c = repo.course("reservoir_cw") || repo.courses.find((x) => x.routePoints.length > 1);
+    if (!c) return;
+    Object.assign(settings, { simGps: true, simHr: true, simCourseId: c.id, simKmh: Math.max(settings.simKmh, 30) });
+    app.saveSettings();
+    closeAll();
+    app.restartGps();
+    app.hr.simulate(true);
+    app.setTab("ride");
+    toast("Bemutató: szimulált futam indul a(z) " + c.name + " pályán.", { ms: 3000 });
+    setTimeout(() => app.startRace(c.id), 1500);
+  };
+  app.stopSimulation = () => {
+    Object.assign(settings, { simGps: false, simHr: false });
+    app.saveSettings();
+    app.hr.simulate(false);
+    app.restartGps();
+    toast("Szimuláció kikapcsolva.");
   };
   app.dropSnapshot = () => { store.del("activeRide"); toast("A félbeszakadt menetet eldobtad."); };
 

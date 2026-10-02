@@ -13,12 +13,15 @@
 
 import { h, icon, setText, setClass, fitWidth } from "../ui/dom.js";
 import { twoTap } from "../ui/layers.js";
-import { trackSvg } from "../ui/map.js";
 import { fmtMs, fmtTime, fmtDelta, fmtKmLive, fmt1 } from "../engine/format.js";
 import { compassHu } from "../engine/geo.js";
-import { pointAtAlong } from "../engine/ride.js";
 import { gpsQuality } from "../services/gps.js";
-import { hrZone, ZONE_NAMES } from "../services/hr.js";
+import { zoneLimits, zoneOf, zoneFill, ZONE_COLORS } from "../engine/zones.js";
+
+const mapOn = (app) => app.settings.liveMap !== false;
+const hrOn = (app) => app.hr.status !== "off" && app.hr.status !== "unsupported";
+/** The live map takes whatever space is left above the buttons. */
+const mapSlot = (app, body) => { if (mapOn(app)) app.minimap.mount(body); };
 
 function cell(label, iconName, { tier = 2, wide = false } = {}) {
   const val = h("span", { class: "num" }, "–");
@@ -30,23 +33,39 @@ function cell(label, iconName, { tier = 2, wide = false } = {}) {
   return { el, val, unit, sub, set(v, u = "", s = "") { setText(val, v); setText(unit, u); setText(sub, s); fitWidth(row, el); } };
 }
 
+/**
+ * The heart-rate tile: a big bpm number and a fat five-part bar. The bar fills
+ * with the actual pulse, not just the zone: each part covers its zone's bpm
+ * range, so 135 in a 120–150 zone 4 fills half of the 4th part. The whole
+ * filled bar takes the colour of the zone he's in.
+ */
 function hrCell(app) {
-  const c = cell("Pulzus", "heart", { tier: 3, wide: true });
-  const bar = h("div", { class: "hr-zone" }, ...[1, 2, 3, 4, 5].map(() => h("i")));
-  c.el.appendChild(bar);
-  c.update = (t) => {
-    const bpm = app.engine.hrBpm(t);
-    const z = hrZone(bpm, app.settings.maxHr);
-    if (bpm == null) {
-      c.set("–", "bpm", app.hr.status === "reconnecting" ? "Újracsatlakozás…" : "Nincs jel a pulzusmérőtől");
-      setClass(bar, "hr-zone");
-    } else {
-      c.set(String(bpm), "bpm", `${z}. zóna: ${ZONE_NAMES[z]}`);
-      setClass(bar, `hr-zone z${z}`);
-      [...bar.children].forEach((b, i) => setClass(b, i < z ? "on" : ""));
-    }
+  const num = h("span", { class: "num" }, "–");
+  const status = h("div", { class: "sub" });
+  const fills = [0, 1, 2, 3, 4].map(() => h("b"));
+  const bar = h("div", { class: "hr-bar", role: "img", "aria-label": "Pulzuszónák" }, ...fills.map((b) => h("i", {}, b)));
+  const el = h("div", { class: "cell wide hr-cell" },
+    h("div", { class: "hr-row" },
+      h("div", { class: "hr-num" }, num, h("small", {}, "bpm")),
+      h("div", { class: "hr-side" }, h("div", { class: "lab" }, icon("heart", { filled: true }), "Pulzus"), bar)),
+    status);
+  return {
+    el,
+    update(t) {
+      const bpm = app.engine.hrBpm(t);
+      if (bpm == null) {
+        setText(num, "–");
+        setText(status, app.hr.status === "reconnecting" ? "Újracsatlakozás…" : "Nincs jel a pulzusmérőtől");
+        fills.forEach((b) => { b.style.width = "0%"; });
+        return;
+      }
+      setText(num, String(bpm));
+      setText(status, "");
+      const L = zoneLimits(app.settings);
+      const color = ZONE_COLORS[zoneOf(bpm, L)];
+      zoneFill(bpm, L).forEach((f, i) => { fills[i].style.width = `${(f * 100).toFixed(1)}%`; fills[i].style.background = color; });
+    },
   };
-  return c;
 }
 
 export function statusBar(app) {
@@ -85,7 +104,7 @@ export function statusBar(app) {
     else {
       hr.hidden = false;
       const bpm = app.engine.hrBpm(t);
-      if (bpm != null) { setClass(hr, `chip z${hrZone(bpm, app.settings.maxHr)}`); setText(hrVal, String(bpm)); }
+      if (bpm != null) { setClass(hr, `chip z${zoneOf(bpm, zoneLimits(app.settings))}`); setText(hrVal, String(bpm)); }
       else if (hs === "reconnecting" || hs === "connecting") { setClass(hr, "chip warn"); setText(hrVal, "…"); }
       else if (hs === "on") { setClass(hr, "chip warn"); setText(hrVal, "–"); }
       else { setClass(hr, "chip off"); setText(hrVal, "+"); }
@@ -110,7 +129,7 @@ export function rideScreen(app) {
     const hrShown = app.hr.status !== "off" && app.hr.status !== "unsupported";
     return [
       e.mode, e.mode === "freeroam" && e.freeroam.paused, e.mode === "race" && !!e.race.ref, hrShown,
-      app.settings.raceMap, e.mode === "idle" ? e.nearby.map((c) => c.id).join(",") : "",
+      mapOn(app), e.mode === "idle" ? e.nearby.map((c) => c.id).join(",") : "",
       e.mode === "idle" ? gpsProblem(app, t) : "", e.countdown ? "cd" : "",
     ].join("|");
   }
@@ -176,8 +195,13 @@ function buildIdle(app, body, t) {
   const alt = cell("Magasság", "mountain", { tier: 3 });
   const dist = cell("Megtett táv", null, { tier: 3 });
   const max = cell("Max", null, { tier: 3 });
-  // with a course nearby, one row of tiles is enough: the start buttons must stay in view
-  body.append(h("div", { class: "grid" }, head.el, alt.el, e.nearby.length ? null : [dist.el, max.el]));
+  const hr = hrOn(app) ? hrCell(app) : null;
+  // With the live map on, its compass shows the direction, so the tiles are just
+  // distance and max (plus heart rate). Without it, heading and height come back.
+  // With a course nearby, one row is enough: the start buttons must stay in view.
+  if (mapOn(app)) body.append(h("div", { class: "grid" }, dist.el, max.el, hr?.el));
+  else body.append(h("div", { class: "grid" }, head.el, alt.el, e.nearby.length ? null : [dist.el, max.el], hr?.el));
+  mapSlot(app, body);
   body.append(h("div", { class: "controls" },
     h("button", { class: "btn primary full", onClick: () => app.startFreeroam() }, icon("play", { filled: true }), "Szabad menet"),
     h("button", { class: "btn secondary full", onClick: () => app.startRecording() }, icon("record"), "Új pálya felvétele")));
@@ -190,6 +214,7 @@ function buildIdle(app, body, t) {
     alt.set(fresh && f.alt != null ? String(Math.round(f.alt)) : "–", "m");
     dist.set(fmt1(e.session.distanceKm), "km");
     max.set(fmt1(e.session.maxKmh), "km/h");
+    hr?.update(now);
   };
 }
 
@@ -212,6 +237,7 @@ function buildFreeroam(app, body) {
   const pauseBtn = h("button", { class: `btn ${paused ? "primary" : "amber"}`, onClick: () => app.togglePause() },
     icon(paused ? "play" : "pause", { filled: paused }), paused ? "Folytatás" : "Szünet");
   const endBtn = twoTap(h("button", { class: "btn danger" }, icon("stop"), "Vége"), { onConfirm: () => app.finishFreeroam() });
+  mapSlot(app, body);
   body.append(h("div", { class: "controls" }, pauseBtn, endBtn));
 
   return (t) => {
@@ -242,6 +268,7 @@ function buildRecord(app, body) {
   body.append(grid);
   const splitBtn = h("button", { class: "btn sector", onClick: () => app.engine.addSplit() }, icon("split"), "Részidő");
   const stopBtn = twoTap(h("button", { class: "btn danger" }, icon("stop"), "Felvétel vége"), { onConfirm: () => app.stopRecording() });
+  mapSlot(app, body);
   body.append(h("div", { class: "controls" }, splitBtn, stopBtn));
 
   return (t) => {
@@ -262,7 +289,6 @@ function buildRecord(app, body) {
 function buildRace(app, body) {
   const e = app.engine;
   const r = e.race;
-  const route = r.course.routePoints;
   const length = r.cum[r.cum.length - 1];
 
   const bandLab = h("div", { class: "lab" });
@@ -288,18 +314,6 @@ function buildRace(app, body) {
     h("div", { class: "bar" }, fillBar, ...ticks, ghost, me),
     h("div", { class: "legend" }, h("span", {}, pct, " kész"), sect, r.ref ? h("span", { style: { color: "var(--red)" } }, "● rekord") : h("span"))));
 
-  let mini = null, meDot = null, ghostDot = null;
-  if (app.settings.raceMap) {
-    mini = trackSvg(route, { w: 380, h: 100, pad: 10, width: 4, color: "#3d5bd1" });
-    const proj = mini._project;
-    if (proj) {
-      for (const i of r.splits) { const [x, y] = proj(route[i]); mini.append(svgDot(x, y, 5, "#f4d35e")); }
-      if (r.ref) { ghostDot = svgDot(0, 0, 8, "#ff4d5a"); mini.append(ghostDot); }
-      meDot = svgDot(0, 0, 9, "#c2fe00");
-      mini.append(meDot);
-    }
-    body.append(h("div", { class: "mini-track" }, mini));
-  }
 
   const grid = h("div", { class: "grid" });
   const showHr = app.hr.status !== "off" && app.hr.status !== "unsupported";
@@ -309,9 +323,11 @@ function buildRace(app, body) {
   if (hr) grid.append(hr.el);
   body.append(grid);
 
-  const abort = twoTap(h("button", { class: "btn danger" }, icon("close"), "Megszakítás"), { onConfirm: () => app.abortRace() });
+  // "Szakít" is the old app's word for it, and short enough for half a button
+  const abort = twoTap(h("button", { class: "btn danger" }, icon("close"), "Szakít"), { armedLabel: "Biztos? Még egyszer", onConfirm: () => app.abortRace() });
   const finishSub = h("small");
   const finish = h("button", { class: "btn primary", onClick: () => app.finishRace() }, icon("flag"), h("span", { class: "two-line" }, "Cél", finishSub));
+  mapSlot(app, body);
   body.append(h("div", { class: "controls" }, abort, finish));
 
   return (t) => {
@@ -340,11 +356,6 @@ function buildRace(app, body) {
     ticks.forEach((tk, i) => setClass(tk, i < r.nextSplit ? "tick done" : "tick"));
     setText(pct, `${Math.round(p * 100)}%`);
     setText(sect, r.splits.length ? `${Math.min(r.nextSplit + 1, r.splits.length + 1)}/${r.splits.length + 1}. szektor` : "");
-    if (mini && meDot) {
-      const proj = mini._project;
-      if (f) { const [x, y] = proj(f); meDot.setAttribute("cx", x); meDot.setAttribute("cy", y); }
-      if (ghostDot && r.ghostAlong != null) { const [x, y] = proj(pointAtAlong(route, r.cum, r.ghostAlong)); ghostDot.setAttribute("cx", x); ghostDot.setAttribute("cy", y); }
-    }
     avg.set(fmt1(e.averageKmh(t)), "km/h");
     max.set(fmt1(e.session.maxKmh), "km/h");
     if (hr) hr.update(t);
@@ -355,12 +366,6 @@ function buildRace(app, body) {
   };
 }
 
-function svgDot(x, y, r, fill) {
-  const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", r);
-  c.setAttribute("fill", fill); c.setAttribute("stroke", "#040817"); c.setAttribute("stroke-width", "3");
-  return c;
-}
 
 // ---------- countdown ----------
 function buildCountdown(app) {
