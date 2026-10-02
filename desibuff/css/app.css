@@ -407,12 +407,15 @@ button { font: inherit; color: inherit; }
 .map { position: relative; overflow: hidden; background: #0b1023; touch-action: none; border-bottom: 1px solid var(--line); }
 .map.sticky { position: sticky; top: 0; z-index: 5; }
 .map .tiles, .map svg.ov { position: absolute; left: 0; top: 0; }
-.map .tiles img { position: absolute; width: 256px; height: 256px; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.map .tiles img { position: absolute; width: 256px; height: 256px; user-select: none; -webkit-user-drag: none; pointer-events: none;
+  /* OpenStreetMap's tiles are light; inverting them gives a dark map where roads stay readable */
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.5); }
+.map .tint { position: absolute; inset: 0; background: rgba(6, 14, 50, 0.35); pointer-events: none; }
 .map svg.ov { width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .map .zoom { position: absolute; right: 10px; top: 10px; display: grid; gap: 8px; z-index: 3; }
 .map .zoom button { width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--line); background: rgba(10, 18, 48, 0.92); font-size: 28px; font-weight: 700; display: grid; place-items: center; }
 .map .zoom button svg { width: 26px; height: 26px; }
-.map .attr { position: absolute; left: 6px; bottom: 4px; font-size: 11px; color: #8d97b8; background: rgba(4, 8, 23, 0.7); padding: 1px 5px; border-radius: 4px; z-index: 3; }
+.map .attr { position: absolute; left: 6px; bottom: 4px; font-size: 11px; color: #8d97b8; text-decoration: none; background: rgba(4, 8, 23, 0.7); padding: 1px 5px; border-radius: 4px; z-index: 3; }
 
 .chart { margin: 4px 0 10px; }
 .chart svg { width: 100%; height: auto; display: block; }

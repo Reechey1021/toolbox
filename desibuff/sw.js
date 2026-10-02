@@ -2,10 +2,11 @@
 // Offline support, so a ride never depends on mobile signal.
 //   App files:  network first (a new version shows up as soon as you're online),
 //               falling back to the cached copy when there's no signal.
-//   Fonts and map tiles: cache first, since they don't change.
+//   Fonts: cache first, since they don't change.
+//   Map tiles: network first, cached copy when offline.
 // Bump VERSION when files are added or renamed.
 
-const VERSION = "desibuff-1.0.0";
+const VERSION = "desibuff-1.0.1";
 const APP = [
   "./", "./index.html", "./manifest.webmanifest", "./css/app.css",
   "./js/main.js", "./js/ui/dom.js", "./js/ui/layers.js", "./js/ui/map.js", "./js/ui/charts.js",
@@ -15,7 +16,7 @@ const APP = [
   "./js/screens/ride.js", "./js/screens/courses.js", "./js/screens/profile.js", "./js/screens/sheets.js",
   "./icons/icon.svg", "./icons/icon-180.png", "./icons/icon-192.png",
 ];
-const ASSETS = "desibuff-assets-1";
+const ASSETS = "desibuff-assets-2"; // new name drops the old CARTO "API key required" tiles
 const MAX_TILES = 1500;
 
 self.addEventListener("install", (e) => {
@@ -35,7 +36,16 @@ async function trim(cache) {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
-  const isAsset = url.hostname.endsWith("basemaps.cartocdn.com") || url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
+  if (url.hostname === "tile.openstreetmap.org") {
+    // Map tiles: from the network (the browser's own cache follows OSM's headers),
+    // falling back to our copy when there's no signal.
+    e.respondWith(fetch(e.request).then((res) => {
+      if (res.ok || res.type === "opaque") { const copy = res.clone(); caches.open(ASSETS).then((c) => { c.put(e.request, copy); trim(c); }); }
+      return res;
+    }).catch(() => caches.match(e.request).then((r) => r || Response.error())));
+    return;
+  }
+  const isAsset = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
   if (isAsset) {
     e.respondWith(caches.open(ASSETS).then(async (cache) => {
       const hit = await cache.match(e.request);

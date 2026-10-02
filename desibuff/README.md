@@ -63,7 +63,7 @@ Saved in IndexedDB on the device (not localStorage, whose ~5 MB is shared with t
 - **iPhone:** no browser on iOS supports Bluetooth, so heart rate is Android (Chrome) only. Everything else works on iPhone.
 - **Screen off:** a web page gets no GPS while the screen is off. The app keeps the screen on, but can't stop the power button.
 - **Bluetooth after a restart:** Chrome asks to pick the heart-rate monitor again after each app restart. Where Chrome allows it, the app reconnects to a known device by itself.
-- **Maps:** CARTO's dark map style on OpenStreetMap data, so it's free with no key. Tiles you've seen are cached for offline. On the ride screen the course is drawn without a map, so it needs no signal.
+- **Maps:** OpenStreetMap's own tiles (free, no API key), darkened to match the app. Tiles you've seen are kept for offline use. On the ride screen the course is drawn without a map, so it needs no signal.
 
 ## Testing on a desktop
 

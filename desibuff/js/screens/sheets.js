@@ -115,7 +115,7 @@ export function showRecovery(app, snap) {
 // ---------- status cards ----------
 export function showGpsInfo(app) {
   const f = app.engine.fix;
-  openSheet({
+  const sheet = openSheet({
     render: (el) => {
       const q = gpsQuality(f?.acc);
       put(el, 
@@ -127,7 +127,8 @@ export function showGpsInfo(app) {
         line("Szélesség", f ? f.lat.toFixed(5) : "–"),
         line("Hosszúság", f ? f.lng.toFixed(5) : "–"),
         line("Utolsó jel", f ? `${Math.max(0, Math.round((Date.now() - f.t) / 1000))} mp-e` : "–"),
-        h("p", { class: "help", style: { color: "var(--muted)", marginTop: "10px" } }, "Távot csak 30 m-nél pontosabb jelből számol, mint a régi app. 8 m alatt kiváló, 15 m alatt jó."));
+        h("p", { class: "help", style: { color: "var(--muted)", marginTop: "10px" } }, "Távot csak 30 m-nél pontosabb jelből számol, mint a régi app. 8 m alatt kiváló, 15 m alatt jó."),
+        h("div", { class: "sheet-actions" }, h("button", { class: "btn primary", onClick: () => sheet.close() }, "Bezárás")));
     },
   });
 }
@@ -139,7 +140,8 @@ export function showHeartRate(app) {
       const bpm = app.engine.hrBpm(Date.now());
       const head = h("h2", { class: "sheet-title" }, "Pulzusmérő");
       if (st === "unsupported" && !app.settings.simHr) {
-        put(el, head, h("p", { class: "sheet-text" }, "Ez a böngésző nem tud Bluetooth eszközhöz csatlakozni. Androidon a Chrome tud; iPhone-on egyik böngésző sem."));
+        put(el, head, h("p", { class: "sheet-text" }, "Ez a böngésző nem tud Bluetooth eszközhöz csatlakozni. Androidon a Chrome tud; iPhone-on egyik böngésző sem."),
+          h("div", { class: "sheet-actions" }, h("button", { class: "btn primary", onClick: () => sheet.close() }, "Bezárás")));
         return;
       }
       const connected = st === "on";
@@ -152,13 +154,14 @@ export function showHeartRate(app) {
         h("div", { class: "sheet-actions" },
           connected || st === "reconnecting"
             ? h("button", { class: "btn secondary", onClick: () => { app.hr.disconnect(); sheet.refresh(); } }, "Leválasztás")
-            : h("button", { class: "btn primary", onClick: async () => { await app.connectHeartRate(); sheet.refresh(); } }, icon("heart", { filled: true }), "Csatlakoztatás")));
+            : h("button", { class: "btn primary", onClick: async () => { await app.connectHeartRate(); sheet.refresh(); } }, icon("heart", { filled: true }), "Csatlakoztatás"),
+          h("button", { class: "btn secondary", onClick: () => sheet.close() }, "Bezárás")));
     },
   });
 }
 
 export function showWakeInfo(app) {
-  openSheet({
+  const sheet = openSheet({
     render: (el) => {
       const ws = app.state.wakeState;
       put(el, 
@@ -167,7 +170,7 @@ export function showWakeInfo(app) {
           ? "Most nem sikerült ébren tartani a képernyőt. Koppints bárhová a képernyőn, és újra próbálja. Ha az energiatakarékos mód be van kapcsolva, kapcsold ki."
           : "Amíg az app nyitva van, a képernyő nem kapcsol ki és nem zárol le magától."),
         h("p", { class: "sheet-text" }, "A bekapcsológombot egy weboldal nem tudja letiltani. Ha véletlenül megnyomod, nyisd meg újra: a menet ideje fut tovább, a kimaradt távot pedig pótolja."),
-        h("div", { class: "sheet-actions" }, h("button", { class: "btn primary", onClick: () => app.wake.acquire() }, "Rendben")));
+        h("div", { class: "sheet-actions" }, h("button", { class: "btn primary", onClick: () => { sheet.close(); app.wake.acquire(); } }, "Rendben")));
     },
   });
 }

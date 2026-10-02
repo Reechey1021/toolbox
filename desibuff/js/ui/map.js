@@ -2,7 +2,8 @@
 // Two ways to show a route:
 //   trackSvg()  just the line, fitted to a box. No network needed. Used on the
 //               ride screen and for course thumbnails.
-//   TileMap     a real street map (CARTO's dark style, OpenStreetMap data) with
+//   TileMap     a real street map (OpenStreetMap's standard tiles, no API key,
+//               darkened in CSS to match the navy theme) with
 //               drag, pinch, wheel and buttons to zoom. Used on course and ride
 //               pages and in the split editor. Offline, the route still draws
 //               on the dark background.
@@ -76,12 +77,12 @@ export class TileMap {
     this.tiles = h("div", { class: "tiles" });
     this.svg = s("svg", { class: "ov" });
     this.el = h("div", { class: "map", style: { height: `${height}px` } },
-      this.tiles, this.svg,
+      this.tiles, h("div", { class: "tint" }), this.svg,
       h("div", { class: "zoom" },
         h("button", { "aria-label": "Nagyítás", onClick: (e) => { e.stopPropagation(); this.zoomBy(1); } }, icon("plus")),
         h("button", { "aria-label": "Kicsinyítés", onClick: (e) => { e.stopPropagation(); this.zoomBy(-1); } }, icon("minus")),
         h("button", { "aria-label": "Az egész pálya", onClick: (e) => { e.stopPropagation(); this.fit(); } }, icon("fit"))),
-      h("div", { class: "attr" }, "© OpenStreetMap, © CARTO"));
+      h("a", { class: "attr", href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "© OpenStreetMap contributors"));
     this.cache = new Map();
     this.bindGestures();
     this.ro = new ResizeObserver(() => { if (!this.fitted) this.fit(); else this.render(); });
@@ -139,7 +140,8 @@ export class TileMap {
         img.decoding = "async";
         img.alt = "";
         img.onerror = () => { img.style.visibility = "hidden"; };
-        img.src = `https://${"abcd"[(tx + y) % 4]}.basemaps.cartocdn.com/dark_all/${key}@2x.png`;
+        img.referrerPolicy = "strict-origin-when-cross-origin"; // OSM asks for a referrer
+        img.src = `https://tile.openstreetmap.org/${key}.png`;
         this.cache.set(key + "@" + x, img);
       }
       img.style.left = `${x * TILE - left}px`;
@@ -167,7 +169,7 @@ export class TileMap {
     const pts = new Map();
     let start = null, pinch = null;
     this.el.addEventListener("pointerdown", (e) => {
-      if (e.target.closest("button")) return;
+      if (e.target.closest("button, a")) return;
       this.el.setPointerCapture(e.pointerId);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size === 1) start = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy, t: Date.now(), moved: false };

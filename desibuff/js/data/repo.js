@@ -18,6 +18,29 @@ export class Repo {
     this.listeners = new Set();
     this.lastId = 0;
     if (!(data.courses && data.courses.length)) this.save("courses");
+    if (this.relinkOrphanRuns()) this.save("courseRuns");
+  }
+
+  /**
+   * Runs whose course id no longer exists get attached to the course with the
+   * same name, when exactly one course has that name. The old Android importer
+   * gave courses new ids, so runs from before an import on the phone pointed at
+   * ids that were gone. Returns how many runs were relinked.
+   */
+  relinkOrphanRuns() {
+    const ids = new Set(this.courses.map((c) => c.id));
+    const byName = new Map();
+    for (const c of this.courses) {
+      const k = c.name.trim().toLowerCase();
+      byName.set(k, byName.has(k) ? null : c.id); // null = ambiguous, leave alone
+    }
+    let n = 0;
+    for (const r of this.courseRuns) {
+      if (ids.has(r.courseId)) continue;
+      const id = byName.get((r.courseName || "").trim().toLowerCase());
+      if (id) { r.courseId = id; n++; }
+    }
+    return n;
   }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
@@ -159,6 +182,7 @@ export class Repo {
     merge("courses", parsed.courses && parsed.courses.filter((c) => c.routePoints.length >= 2), { incomingFirst: true });
     merge("courseRuns", parsed.courseRuns, { incomingFirst: false });
     merge("freeroamSessions", parsed.freeroamSessions, { incomingFirst: false });
+    counts.relinked = this.relinkOrphanRuns();
     this.save("courses", "freeroamSessions", "courseRuns");
     return counts;
   }

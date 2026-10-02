@@ -305,6 +305,20 @@ const androidBackup = {
   check(/nincs pálya/.test(msg), "an empty file says there's nothing in it");
 }
 
+// ---------- relinking runs whose course id is gone ----------
+{
+  const backup = JSON.parse(JSON.stringify(androidBackup));
+  backup.courseRuns[0].courseId = "imported_1730000000000_3"; // stale id from an earlier import on the phone
+  backup.courses.push({ ...backup.courses[1], id: "recorded_dupe", name: "Dupla" }, { ...backup.courses[1], id: "recorded_dupe2", name: "Dupla" });
+  backup.courseRuns.push({ ...backup.courseRuns[0], id: "course_run_x", courseId: "gone", courseName: "Dupla" });
+  const repo = memRepo();
+  const c = repo.importData(parseBackup(JSON.stringify(backup)));
+  check(c.relinked === 1 && repo.runsFor("recorded_1741900000000").length === 1, "a run with a stale course id is relinked by course name");
+  check(repo.courseRuns.find((r) => r.id === "course_run_x").courseId === "gone", "an ambiguous name (two courses called the same) is left alone");
+  const reloaded = memRepo({ courses: repo.courses, courseRuns: [{ ...repo.courseRuns[0], courseId: "stale" }], freeroamSessions: [] });
+  check(reloaded.runsFor("recorded_1741900000000").length === 1, "data imported before this fix is repaired on start-up");
+}
+
 // ---------- formats ----------
 check(fmtTime(425) === "07:05" && fmtTime(3725) === "1:02:05", "times format as mm:ss and h:mm:ss");
 check(fmtSigned(-4) === "−0:04" && fmtSigned(72) === "+1:12" && fmtSigned(0) === "±0:00", "signed durations match the old app");

@@ -109,7 +109,7 @@ async function importFile(app, f) {
   if (!ok) return;
   await app.saveImportUndo();
   const c = app.repo.importData(parsed);
-  toast(`Betöltve: ${c.courses} pálya (${c.added.courses} új), ${c.courseRuns} futam (${c.added.courseRuns} új), ${c.freeroamSessions} szabad menet (${c.added.freeroamSessions} új).`, { kind: "good", ms: 7000 });
+  toast(`Betöltve: ${c.courses} pálya (${c.added.courses} új), ${c.courseRuns} futam (${c.added.courseRuns} új), ${c.freeroamSessions} szabad menet (${c.added.freeroamSessions} új).${c.relinked ? ` ${c.relinked} futamot a nevük alapján a pályájukhoz kötöttem.` : ""}`, { kind: "good", ms: 7000 });
 }
 
 async function undoImport(app) {
